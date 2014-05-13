@@ -36,7 +36,6 @@ class BNSDevice(object):
 	# if I address board 1 with Board=1, I get an msc error; using Board=0 seems to work just fine.
 	
 
-
 	def __init__(self):
 		# path to dll
 		self.libPath = "PCIe16Interface"
@@ -47,6 +46,15 @@ class BNSDevice(object):
 		# Boolean showing initialization status.
 		self.haveSLM = False
 		
+	def requires_slm(func):
+		def wrapper(self, *args, **kwargs):
+			if self.haveSLM == False:
+				raise Exception("SLM is not initialized.")
+			else:
+				return func(self, *args, **kwargs)
+		return wrapper
+
+
 	def initialize(self):
 		try:
 			self.lib = ctypes.WinDLL(self.libPath)
@@ -65,20 +73,26 @@ class BNSDevice(object):
 		else:
 			self.haveSLM = True
 
+	
 	def cleanup(self):
 		try:
 			self.lib.Deconstructor()
 		except:
 			pass
 		self.lib = None
+		self.haveSLM = False
 
 	@property
+	@requires_slm
 	def temperature(self):
 	    return self.lib.GetInternalTemp(c_int(0))
-
+	
+	
 	@property
+	@requires_slm
 	def power(self):
 	    return self.lib.GetSLMPower(c_int(0))
 	@power.setter
+	@requires_slm
 	def power(self, value):
 	    self.lib.SLMPower(c_int(0), c_bool(value))
