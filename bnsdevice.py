@@ -3,6 +3,7 @@
 # handlers?
 
 import ctypes
+from ctypes import c_int, c_bool
 
 CLASS_NAME = "BNSDevice"
 
@@ -36,27 +37,48 @@ class BNSDevice(object):
 	
 
 
-	def _init__(self):
-		#device.Device.__init__(self)
-		
+	def __init__(self):
 		# path to dll
-		self.libraryPath = "BNSPCIe16Board.dll"
+		self.libPath = "PCIe16Interface"
 		
 		# loaded library instance
-		self.library = None
+		self.lib = None
 		
 		# Boolean showing initialization status.
-		self.haveBNS = False
+		self.haveSLM = False
 		
 	def initialize(self):
 		try:
-			self.library = ctypes.cdll.LoadLibrary(self.libraryPath)
-		except Exception e:
-			message = "The SLM is not available: %s" % e
+			self.lib = ctypes.WinDLL(self.libPath)
+			n = self.lib.Constructor(c_int(1)) # Initlialize the library, looking for nematic SLMs.
+			if n == 0:
+				raise Exception("No SLM device found.")
+			elif n > 1:
+				raise Exception("More than one SLM device found. This module can only handle one device.")
+		except Exception as e:
+			message = e.message or "There was a problem with the SLM: %s" % e
 			caption = "SLM error"
+			try:
+				self.lib.Deconstructor() # Call the DLL deconstructor.
+			except:
+				pass
+		else:
+			self.haveSLM = True
 
+	def cleanup(self):
+		try:
+			self.lib.Deconstructor()
+		except:
+			pass
+		self.lib = None
 
+	@property
+	def temperature(self):
+	    return self.lib.GetInternalTemp(c_int(0))
 
-			
-	
-		
+	@property
+	def power(self):
+	    return self.lib.GetSLMPower(c_int(0))
+	@power.setter
+	def power(self, value):
+	    self.lib.SLMPower(c_int(0), c_bool(value))
