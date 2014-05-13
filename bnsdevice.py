@@ -29,6 +29,10 @@ class BNSDevice(object):
 	# GetTIFFInfo
 	# GetCurSeqImage
 	# GetImageSize
+	#
+	#==== Notes ====
+	# The BNS documentation states that int Board is a 1-based index, but it would appear to be 0-based:
+	# if I address board 1 with Board=1, I get an msc error; using Board=0 seems to work just fine.
 	
 
 
