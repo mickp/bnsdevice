@@ -3,7 +3,7 @@
 # handlers?
 
 import ctypes
-from ctypes import c_int, c_bool, c_double, c_short
+from ctypes import c_int, c_bool, c_double, c_short, windll
 
 CLASS_NAME = "BNSDevice"
 
@@ -58,30 +58,39 @@ class BNSDevice(object):
 
 	def initialize(self):
 		try:
+			# If library has been opened, need to force unloading it.#
+			# Otherwise, the DLL can open an error window about having already
+			# initialized another DLL, which we won't see on a remote machine.
+			if self.lib:
+				while(windll.kernel32.FreeLibrary(self.lib._handle)):
+					# Keep calling FreeLibrary until we really close the library.
+					pass
+			
+			# (re)open the DLL
 			self.lib = ctypes.WinDLL(self.libPath)
-			n = self.lib.Constructor(c_int(1)) # Initlialize the library, looking for nematic SLMs.
+			
+			# Initlialize the library, looking for nematic SLMs.
+			n = self.lib.Constructor(c_int(1)) 
 			if n == 0:
 				raise Exception("No SLM device found.")
 			elif n > 1:
 				raise Exception("More than one SLM device found. This module can only handle one device.")
 		except Exception as e:
-			message = e.message or "There was a problem with the SLM: %s" % e
-			caption = "SLM error"
-			try:
-				self.lib.Deconstructor() # Call the DLL deconstructor.
-			except:
-				pass
+			raise
 		else:
 			self.haveSLM = True
 
 	
+	# Don't call this unless an SLM was initialised:  if you do, the next call can
+	# open that damned dialog box from some other library down the chain.
+	@requires_slm
 	def cleanup(self):
 		try:
 			self.lib.Deconstructor()
 		except:
 			pass
-		self.lib = None
 		self.haveSLM = False
+
 
 	@property
 	@requires_slm
