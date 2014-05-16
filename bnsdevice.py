@@ -1,30 +1,28 @@
-#import depot
-#import device
-# handlers?
-
 import ctypes
-from ctypes import c_int, c_bool, c_double, c_short, windll
+from ctypes import c_int, c_bool, c_double, c_short, c_char, windll
 
 CLASS_NAME = "BNSDevice"
 
 class BNSDevice(object):
 	# === BNS Interface.dll functions ===
-	# + indicates implemented here
+	# + indicates equivalent python implementation here
+	# o indicates calls from non-equivalent python code here
+	#
 	# ==== Documented ====
 	# + int Constructor (int LCType={0:FLC;1:Nematic})
 	# + void Deconstructor ()
 	#   void ReadTIFF (const char* FilePath, unsigned short* ImageData, unsigned int ScaleWidth, unsigned int ScaleHeight) 
-	#   void WriteImage (int Board, unsigned short* Image)
-	#   void LoadLUTFile (int Board, char* LUTFileName)
-	#   void LoadSequence (int Board, unsigned short* Image, int NumberOfImages)
+	# + void WriteImage (int Board, unsigned short* Image)
+	# + void LoadLUTFile (int Board, char* LUTFileName)
+	# o void LoadSequence (int Board, unsigned short* Image, int NumberOfImages)
 	# + void SetSequencingRate (double FrameRate)
 	# + void StartSequence ()
 	# + void StopSequence ()
 	# + bool GetSLMPower (int Board)
-	# + vvoid SLMPower (int Board, bool PowerOn)
-	#   void WriteCal (int Board, CAL_TYPE Caltype={WFC;NUC}, unsigned char* Image )
+	# + void SLMPower (int Board, bool PowerOn)
+	# + void WriteCal (int Board, CAL_TYPE Caltype={WFC;NUC}, unsigned char* Image )
 	#   int ComputeTF (float FrameRate)
-	#   void SetTrueFrames (int Board, int TrueFrames)
+	# + void SetTrueFrames (int Board, int TrueFrames)
 	#
 	# ==== Undocumented ====
 	# + GetInternalTemp
@@ -46,7 +44,9 @@ class BNSDevice(object):
 		
 		# Boolean showing initialization status.
 		self.haveSLM = False
-		
+
+
+	# decorator definition for methods that require an SLM		
 	def requires_slm(func):
 		def wrapper(self, *args, **kwargs):
 			if self.haveSLM == False:
@@ -107,13 +107,16 @@ class BNSDevice(object):
 	def power(self, value):
 	    self.lib.SLMPower(c_int(0), c_bool(value))
 
+
 	@requires_slm
 	def start_sequence(self):
 		self.lib.StartSequence()
 
+
 	@requires_slm
 	def stop_sequence(self):
 		self.lib.StopSequence()
+
 
 	@requires_slm
 	def set_sequencing_framrate(self, frameRate):
@@ -132,8 +135,45 @@ class BNSDevice(object):
 		
 		# Turn imageList into a single list, then make that into an array of c_shorts.
 		# (c_short * length)(*array)
-		images = (c_short * sum(len(image) for image in imageList))(*sum(imageList, []))
+		# images = (c_short * sum(len(image) for image in imageList))(*sum(imageList, []))
+		images = (c_short * sum(len(image) for image in imageList))(*imageList)
 
 		# Now pass this by reference to the DLL function.
 		# LoadSequence (int Board, unsigned short* Image, int NumberOfImages)
-		self.lib.LoadSequence( c_int(0), ctypes.byref(c), c_int(len(imageList)))
+		self.lib.LoadSequence( c_int(0), ctypes.byref(images), c_int(len(imageList)))
+
+
+	@requires_slm
+	def write_cal(self, type, calImage):
+		# void WriteCal (int Board, CAL_TYPE Caltype={WFC;NUC}, unsigned char* Image )
+		
+		# Not sure what type to pass the  CAL_TYPE as ... this is an ENUM, so could be
+		# compiler / platform dependent.
+		# 0 = WFC = wavefront correction
+		# 1 = NUC = non-uniformity correction.
+
+		# Image is a 1D array containing values from the 2D image.
+		image = (c_char * len(image))(*calImage)
+
+		self.lib.WriteCal(c_int(0), c_int(type), ctypes.byref(image))
+
+	
+	@requires_slm
+	def load_lut(self, filename):
+		self.lib.LoadLUTFile(c_int(board), ctypes.byref(c_char * len(filename))(*filename))
+
+
+	@requires_slm
+	def set_true_frames(self, trueFrames):
+		self.lib.SetTrueFrames(c_int(0), c_int(trueFrames))
+
+
+	def flatten_image(self, image):
+		if len(image) != image.size:
+			flatImage = [inner
+			                 for outer in image
+			                     for inner in outer
+			            ]
+			return flatImage
+		else:
+			return image
