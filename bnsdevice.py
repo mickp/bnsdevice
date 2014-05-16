@@ -1,5 +1,5 @@
 import ctypes
-from ctypes import c_int, c_bool, c_double, c_short, c_char, c_char_p, windll
+from ctypes import c_int, c_bool, c_double, c_short, c_char, c_char_p, c_uint, c_ushort, windll
 
 CLASS_NAME = "BNSDevice"
 
@@ -11,7 +11,7 @@ class BNSDevice(object):
 	# ==== Documented ====
 	# + int Constructor (int LCType={0:FLC;1:Nematic})
 	# + void Deconstructor ()
-	#   void ReadTIFF (const char* FilePath, unsigned short* ImageData, unsigned int ScaleWidth, unsigned int ScaleHeight) 
+	# + void ReadTIFF (const char* FilePath, unsigned short* ImageData, unsigned int ScaleWidth, unsigned int ScaleHeight) 
 	# + void WriteImage (int Board, unsigned short* Image)
 	# + void LoadLUTFile (int Board, char* LUTFileName)
 	# o void LoadSequence (int Board, unsigned short* Image, int NumberOfImages)
@@ -40,8 +40,9 @@ class BNSDevice(object):
 		self.libPath = "PCIe16Interface"
 		
 		# loaded library instance
-		self.lib = None
-		
+		# Now loaded here so that read_tiff is accessible even if there is no SLM present.
+		self.lib = ctypes.WinDLL(self.libPath)
+
 		# Boolean showing initialization status.
 		self.haveSLM = False
 
@@ -58,7 +59,7 @@ class BNSDevice(object):
 
 	def initialize(self): #tested
 		try:
-			# If library has been opened, need to force unloading it.#
+			# Need to unload and reload the DLL here.
 			# Otherwise, the DLL can open an error window about having already
 			# initialized another DLL, which we won't see on a remote machine.
 			if self.lib:
@@ -66,7 +67,7 @@ class BNSDevice(object):
 					# Keep calling FreeLibrary until we really close the library.
 					pass
 			
-			# (re)open the DLL
+			# re-open the DLL
 			self.lib = ctypes.WinDLL(self.libPath)
 			
 			# Initlialize the library, looking for nematic SLMs.
@@ -80,7 +81,7 @@ class BNSDevice(object):
 		else:
 			self.haveSLM = True
 
-	
+
 	# Don't call this unless an SLM was initialised:  if you do, the next call can
 	# open that damned dialog box from some other library down the chain.
 	@requires_slm
@@ -194,3 +195,10 @@ class BNSDevice(object):
 			return flatImage
 		else:
 			return image
+
+
+	def read_tiff(self, filePath, width, height):
+		# void ReadTIFF (const char* FilePath, unsigned short* ImageData, unsigned int ScaleWidth, unsigned int ScaleHeight) 
+		buffer = (c_ushort * width * height)()
+		self.lib.ReadTIFF(c_char_p(filePath), buffer, c_uint(width), c_uint(height))
+		return buffer
