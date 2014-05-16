@@ -3,7 +3,7 @@
 # handlers?
 
 import ctypes
-from ctypes import c_int, c_bool, c_double
+from ctypes import c_int, c_bool, c_double, c_short
 
 CLASS_NAME = "BNSDevice"
 
@@ -111,3 +111,20 @@ class BNSDevice(object):
 		# note - probably requires internal-triggering DLL,
 		# rather than that set up for external triggering.
 		self.lib.SetSequencingRate( c_double(frameRate) )
+
+	@requires_slm
+	def load_sequence(self, imageList):
+		# imageList is a list of images, each of which is a list of integers.
+		if len(imageList < 2):
+			raise Exception("load_sequence expects a list of two or more images - it was passed %s images." %len(imageList))
+
+
+		# Need to make a 1D array of shorts containing the image data.
+		
+		# Turn imageList into a single list, then make that into an array of c_shorts.
+		# (c_short * length)(*array)
+		images = (c_short * sum(len(image) for image in imageList))(*sum(imageList, []))
+
+		# Now pass this by reference to the DLL function.
+		# LoadSequence (int Board, unsigned short* Image, int NumberOfImages)
+		self.lib.LoadSequence( c_int(0), ctypes.byref(c), c_int(len(imageList)))
