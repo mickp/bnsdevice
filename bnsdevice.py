@@ -1,5 +1,5 @@
 import ctypes
-from ctypes import c_int, c_bool, c_double, c_short, c_char, windll
+from ctypes import c_int, c_bool, c_double, c_short, c_char, c_char_p, windll
 
 CLASS_NAME = "BNSDevice"
 
@@ -56,7 +56,7 @@ class BNSDevice(object):
 		return wrapper
 
 
-	def initialize(self):
+	def initialize(self): #tested
 		try:
 			# If library has been opened, need to force unloading it.#
 			# Otherwise, the DLL can open an error window about having already
@@ -84,7 +84,7 @@ class BNSDevice(object):
 	# Don't call this unless an SLM was initialised:  if you do, the next call can
 	# open that damned dialog box from some other library down the chain.
 	@requires_slm
-	def cleanup(self):
+	def cleanup(self): #tested
 		try:
 			self.lib.Deconstructor()
 		except:
@@ -94,49 +94,58 @@ class BNSDevice(object):
 
 	@property
 	@requires_slm
-	def temperature(self):
+	def temperature(self): #tested - works
 	    return self.lib.GetInternalTemp(c_int(0))
-	
 	
 	@property
 	@requires_slm
-	def power(self):
+	def curr_seq_image(self): # tested - works
+		return self.lib.GetCurSeqImage(c_int(0))
+		
+	
+	@property
+	@requires_slm
+	def power(self): #tested - works
 	    return self.lib.GetSLMPower(c_int(0))
 	@power.setter
 	@requires_slm
-	def power(self, value):
+	def power(self, value): #tested - works
 	    self.lib.SLMPower(c_int(0), c_bool(value))
 
 
 	@requires_slm
-	def start_sequence(self):
+	def start_sequence(self): # tested - works
 		self.lib.StartSequence()
 
 
 	@requires_slm
-	def stop_sequence(self):
+	def stop_sequence(self): # tested - works
 		self.lib.StopSequence()
 
-
 	@requires_slm
-	def set_sequencing_framrate(self, frameRate):
+	def write_image(self, image): #tested - works
+	# void WriteImage (int Board, unsigned short* Image)
+		self.lib.WriteImage(c_int(0), ctypes.byref((c_short * len(image))(*image)))
+		
+		
+	@requires_slm
+	def set_sequencing_framrate(self, frameRate): # tested - no errors
 		# note - probably requires internal-triggering DLL,
 		# rather than that set up for external triggering.
 		self.lib.SetSequencingRate( c_double(frameRate) )
 
 	@requires_slm
-	def load_sequence(self, imageList):
+	def load_sequence(self, imageList): #tested - no errors
 		# imageList is a list of images, each of which is a list of integers.
-		if len(imageList < 2):
+		if len(imageList) < 2:
 			raise Exception("load_sequence expects a list of two or more images - it was passed %s images." %len(imageList))
-
 
 		# Need to make a 1D array of shorts containing the image data.
 		
 		# Turn imageList into a single list, then make that into an array of c_shorts.
 		# (c_short * length)(*array)
 		# images = (c_short * sum(len(image) for image in imageList))(*sum(imageList, []))
-		images = (c_short * sum(len(image) for image in imageList))(*imageList)
+		images = (c_short * sum(len(image) for image in imageList))(*sum(imageList, []))
 
 		# Now pass this by reference to the DLL function.
 		# LoadSequence (int Board, unsigned short* Image, int NumberOfImages)
@@ -144,7 +153,7 @@ class BNSDevice(object):
 
 
 	@requires_slm
-	def write_cal(self, type, calImage):
+	def write_cal(self, type, calImage): #tested - no errors
 		# void WriteCal (int Board, CAL_TYPE Caltype={WFC;NUC}, unsigned char* Image )
 		
 		# Not sure what type to pass the  CAL_TYPE as ... this is an ENUM, so could be
@@ -153,18 +162,26 @@ class BNSDevice(object):
 		# 1 = NUC = non-uniformity correction.
 
 		# Image is a 1D array containing values from the 2D image.
-		image = (c_char * len(image))(*calImage)
-
+		# image = (c_char * len(calImage))(*calImage)
+		# Doesn't seem to like c_char, which doesn't make sense anyway, as
+		# the calibration files are 16-bit.  
+		# Try c_short.  Well, there is no error, but I don't see any changes,
+		# either.
+		image = (c_short * len(calImage))(*calImage)
 		self.lib.WriteCal(c_int(0), c_int(type), ctypes.byref(image))
 
 	
 	@requires_slm
-	def load_lut(self, filename):
-		self.lib.LoadLUTFile(c_int(board), ctypes.byref(c_char * len(filename))(*filename))
+	def load_lut(self, filename): #tested - no errors
+		#self.lib.LoadLUTFile(c_int(0), ctypes.byref(c_char_p(filename)))
+		self.lib.LoadLUTFile(c_int(0), c_char_p(filename))
+		# Warning: opens a dialog if it can't read the LUT file.
+		# Should probably check if the LUT file exists and validate it
+		# before calling LoadLUTFile.
 
 
 	@requires_slm
-	def set_true_frames(self, trueFrames):
+	def set_true_frames(self, trueFrames): #tested - no errors
 		self.lib.SetTrueFrames(c_int(0), c_int(trueFrames))
 
 
