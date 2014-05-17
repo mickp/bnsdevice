@@ -27,10 +27,7 @@ HSTRIPES=[]
 for n in range(512/4):
 	HSTRIPES.extend(2*512*[lo] + 2*512*[hi])
 	
-DSTRIPES = []
-for n in range((512/6)-1):
-	DSTRIPES.extend(3*[lo]+3*[hi])
+DSTRIPES = 512 * (512 / 6) * (3*[lo]+3*[hi])
 DSTRIPES.extend((512*512 - len(DSTRIPES)) * [lo])
-
 	
 SEQ = [BLACK,WHITE,HSTRIPES,DSTRIPES,VSTRIPES]
