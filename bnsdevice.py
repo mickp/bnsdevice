@@ -123,6 +123,7 @@ class BNSDevice(object):
 	def stop_sequence(self): # tested - works
 		self.lib.StopSequence()
 
+
 	@requires_slm
 	def write_image(self, image): #tested - works
 	# void WriteImage (int Board, unsigned short* Image)
@@ -134,6 +135,7 @@ class BNSDevice(object):
 		# note - probably requires internal-triggering DLL,
 		# rather than that set up for external triggering.
 		self.lib.SetSequencingRate( c_double(frameRate) )
+
 
 	@requires_slm
 	def load_sequence(self, imageList): #tested - no errors
@@ -165,10 +167,9 @@ class BNSDevice(object):
 		# Image is a 1D array containing values from the 2D image.
 		# image = (c_char * len(calImage))(*calImage)
 		# Doesn't seem to like c_char, which doesn't make sense anyway, as
-		# the calibration files are 16-bit.  
-		# Try c_short.  Well, there is no error, but I don't see any changes,
-		# either.
-		image = (c_short * len(calImage))(*calImage)
+		# the calibration files are 16-bit.
+		# Header file states it's an unsigned short.
+		image = (c_ushort * len(calImage))(*calImage)
 		self.lib.WriteCal(c_int(0), c_int(type), ctypes.byref(image))
 
 	
