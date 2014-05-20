@@ -27,7 +27,7 @@ class BNSDevice(object):
 	# ==== Undocumented ====
 	# + GetInternalTemp
 	#   GetTIFFInfo
-	#   GetCurSeqImage
+	# + GetCurSeqImage
 	#   GetImageSize
 	#
 	#==== Notes ====
@@ -46,7 +46,7 @@ class BNSDevice(object):
 		# Boolean showing initialization status.
 		self.haveSLM = False
 
-
+	# === DECORATORS === #
 	# decorator definition for methods that require an SLM		
 	def requires_slm(func):
 		def wrapper(self, *args, **kwargs):
@@ -55,6 +55,52 @@ class BNSDevice(object):
 			else:
 				return func(self, *args, **kwargs)
 		return wrapper
+
+	# === PROPERTIES === #
+	@property
+	@requires_slm
+	def curr_seq_image(self): # tested - works
+		return self.lib.GetCurSeqImage(c_int(0))
+	
+
+	@property
+	@requires_slm
+	def power(self): #tested - works
+	    return self.lib.GetSLMPower(c_int(0))
+	@power.setter
+	@requires_slm
+	def power(self, value): #tested - works
+	    self.lib.SLMPower(c_int(0), c_bool(value))
+
+
+	@property
+	@requires_slm
+	def temperature(self): #tested - works
+	    return self.lib.GetInternalTemp(c_int(0))
+
+
+	# === METHODS === #
+
+	# Don't call this unless an SLM was initialised:  if you do, the next call can
+	# open that damned dialog box from some other library down the chain.
+	@requires_slm
+	def cleanup(self): #tested
+		try:
+			self.lib.Deconstructor()
+		except:
+			pass
+		self.haveSLM = False
+	
+
+	def flatten_image(self, image):
+		if len(image) != image.size:
+			flatImage = [inner
+			                 for outer in image
+			                     for inner in outer
+			            ]
+			return flatImage
+		else:
+			return image
 
 
 	def initialize(self): #tested
@@ -82,59 +128,13 @@ class BNSDevice(object):
 			self.haveSLM = True
 
 
-	# Don't call this unless an SLM was initialised:  if you do, the next call can
-	# open that damned dialog box from some other library down the chain.
 	@requires_slm
-	def cleanup(self): #tested
-		try:
-			self.lib.Deconstructor()
-		except:
-			pass
-		self.haveSLM = False
-
-
-	@property
-	@requires_slm
-	def temperature(self): #tested - works
-	    return self.lib.GetInternalTemp(c_int(0))
-	
-	@property
-	@requires_slm
-	def curr_seq_image(self): # tested - works
-		return self.lib.GetCurSeqImage(c_int(0))
-		
-	
-	@property
-	@requires_slm
-	def power(self): #tested - works
-	    return self.lib.GetSLMPower(c_int(0))
-	@power.setter
-	@requires_slm
-	def power(self, value): #tested - works
-	    self.lib.SLMPower(c_int(0), c_bool(value))
-
-
-	@requires_slm
-	def start_sequence(self): # tested - works
-		self.lib.StartSequence()
-
-
-	@requires_slm
-	def stop_sequence(self): # tested - works
-		self.lib.StopSequence()
-
-
-	@requires_slm
-	def write_image(self, image): #tested - works
-	# void WriteImage (int Board, unsigned short* Image)
-		self.lib.WriteImage(c_int(0), ctypes.byref((c_short * len(image))(*image)))
-		
-		
-	@requires_slm
-	def set_sequencing_framrate(self, frameRate): # tested - no errors
-		# note - probably requires internal-triggering DLL,
-		# rather than that set up for external triggering.
-		self.lib.SetSequencingRate( c_double(frameRate) )
+	def load_lut(self, filename): #tested - no errors
+		#self.lib.LoadLUTFile(c_int(0), ctypes.byref(c_char_p(filename)))
+		self.lib.LoadLUTFile(c_int(0), c_char_p(filename))
+		# Warning: opens a dialog if it can't read the LUT file.
+		# Should probably check if the LUT file exists and validate it
+		# before calling LoadLUTFile.
 
 
 	@requires_slm
@@ -155,6 +155,35 @@ class BNSDevice(object):
 		self.lib.LoadSequence( c_int(0), ctypes.byref(images), c_int(len(imageList)))
 
 
+	def read_tiff(self, filePath, width, height):
+		# void ReadTIFF (const char* FilePath, unsigned short* ImageData, unsigned int ScaleWidth, unsigned int ScaleHeight) 
+		buffer = (c_ushort * width * height)()
+		self.lib.ReadTIFF(c_char_p(filePath), buffer, c_uint(width), c_uint(height))
+		return buffer
+
+
+	@requires_slm
+	def set_sequencing_framrate(self, frameRate): # tested - no errors
+		# note - probably requires internal-triggering DLL,
+		# rather than that set up for external triggering.
+		self.lib.SetSequencingRate( c_double(frameRate) )
+
+
+	@requires_slm
+	def set_true_frames(self, trueFrames): #tested - no errors
+		self.lib.SetTrueFrames(c_int(0), c_int(trueFrames))
+
+
+	@requires_slm
+	def start_sequence(self): # tested - works
+		self.lib.StartSequence()
+
+
+	@requires_slm
+	def stop_sequence(self): # tested - works
+		self.lib.StopSequence()
+
+
 	@requires_slm
 	def write_cal(self, type, calImage): #tested - no errors
 		# void WriteCal (int Board, CAL_TYPE Caltype={WFC;NUC}, unsigned char* Image )
@@ -172,34 +201,8 @@ class BNSDevice(object):
 		image = (c_ushort * len(calImage))(*calImage)
 		self.lib.WriteCal(c_int(0), c_int(type), ctypes.byref(image))
 
-	
-	@requires_slm
-	def load_lut(self, filename): #tested - no errors
-		#self.lib.LoadLUTFile(c_int(0), ctypes.byref(c_char_p(filename)))
-		self.lib.LoadLUTFile(c_int(0), c_char_p(filename))
-		# Warning: opens a dialog if it can't read the LUT file.
-		# Should probably check if the LUT file exists and validate it
-		# before calling LoadLUTFile.
-
 
 	@requires_slm
-	def set_true_frames(self, trueFrames): #tested - no errors
-		self.lib.SetTrueFrames(c_int(0), c_int(trueFrames))
-
-
-	def flatten_image(self, image):
-		if len(image) != image.size:
-			flatImage = [inner
-			                 for outer in image
-			                     for inner in outer
-			            ]
-			return flatImage
-		else:
-			return image
-
-
-	def read_tiff(self, filePath, width, height):
-		# void ReadTIFF (const char* FilePath, unsigned short* ImageData, unsigned int ScaleWidth, unsigned int ScaleHeight) 
-		buffer = (c_ushort * width * height)()
-		self.lib.ReadTIFF(c_char_p(filePath), buffer, c_uint(width), c_uint(height))
-		return buffer
+	def write_image(self, image): #tested - works
+	# void WriteImage (int Board, unsigned short* Image)
+		self.lib.WriteImage(c_int(0), ctypes.byref((c_short * len(image))(*image)))
