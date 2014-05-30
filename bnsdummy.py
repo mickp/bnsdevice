@@ -55,7 +55,7 @@ class BNSDevice(object):
 
     @requires_slm
     def load_lut(self, filename): #tested - no errors
-
+        pass;
 
     @requires_slm
     def load_sequence(self, imageList): #tested - no errors
