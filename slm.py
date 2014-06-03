@@ -43,15 +43,15 @@ class SLM(object):
 		self._calibrationFolder = "Phase_Calibration_Files"
 		self.load_calibration_data()
 
-		self.slm = BNSDevice()
+		self.hardware = BNSDevice()
 		self.pixelPitch = 15e-6
 		self.pixels = (512, 512)
-		self.slm.initialize()
-
+		self.hardware.initialize()
 
 
 	def generate_stripe_series(self, pitches, phases, thetas, order):
 		pass
+
 
 	def load_calibration_data(self):
 		""" Loads any calibration data found below module path. """
@@ -113,9 +113,13 @@ class SLM(object):
 	def load_images(self):
 		pass
 
+
 	def run(self):
-		pass
+		self.hardware.power = True
+		self.hardware.start_sequence()
+
 
 	def stop(self):
-		pass
+		self.hardware.stop_sequence()
+		self.hardware.power = False
 
