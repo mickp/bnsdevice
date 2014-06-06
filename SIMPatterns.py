@@ -21,8 +21,8 @@ class SIMPattern3D():
 		
 		# The pattern-generating function --- defined here so it may 
 		# be used in either phase- or angle-first loops, later.
-		def patternfunc():
-			return numpy.round( mp2 * 2 / (2 * pi) * (127.5 + 127.5 * cos ((2 * pi * ( cos(deg2rad(angle)) * k + sin(deg2rad(angle)) * l)) / pp + deg2rad(phase))))
+		def patternfunc(k, l, thetaRad, mp2):
+			return numpy.round( mp2 * 2 / (2 * pi) * (127.5 + 127.5 * cos ((2 * pi * ( cos(thetaRad) * k + sin(thetaRad) * l)) / pp + deg2rad(phase))))
 		
 		# Pattern ordering, angles and phases.
 		phaseThenAngle = phaseThenAngle or self.phaseThenAngle
@@ -55,12 +55,12 @@ class SIMPattern3D():
 		if phaseThenAngle:
 			for angle in angles:
 				for phase in phases:
-					self.patterns[i] = patternfunc()
+					self.patterns[i] = patternfunc(k, l, deg2rad(angle), mp2)
 					i += 1		
 		else:
 			for phase in phases:
 				for angle in angles:
-					self.patterns[i] = patternfunc()
+					self.patterns[i] = patternfunc(k, l, deg2rad(angle), mp2)
 					i += 1		
 			
 	
