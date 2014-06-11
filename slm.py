@@ -3,38 +3,8 @@ from itertools import chain, product
 import os, re, numpy
 from PIL import Image
 
-def loop_in_order(arrayList, order=None):
-    """Iterate over a list of lists in a specified order."""
-    if order == None:
-        order = range (len (arrayList))
 
-    order.reverse()
-    pList = product(*[arrayList[n] for n in order])
-
-    reorder = [order.index(n) for n in range(len(order))]
-
-    for p in pList:
-        yield tuple(p[n] for n in reorder)
-
-
-class StripeSeries(list):
-    def __init__(self, pitches=[], phases=[], thetas=[], order=[2,0,1]):
-        super(StripeSeries, self).__init__()
-        self._pitches = pitches
-        self._phases = phases
-        self._thetas = thetas
-        self.extend(list(loop_in_order ([pitches, phases, thetas], order)))
-
-    def reorder(self, order=[2,0,1]):
-        self[:] = list(loop_in_order ([self._pitches, self._phases, self._thetas], order))
-
-
-class StripePattern(object):
-    def __init__(self, pitch=1, angle=0, phase=0):
-        pass
-
-
-class SLM(object):
+class SpatialLightModulator(object):
     def __init__(self):
         self.LUTs = {}
         self.calibs = {}
@@ -44,13 +14,25 @@ class SLM(object):
         self.load_calibration_data()
 
         self.hardware = BNSDevice()
-        self.pixelPitch = 15e-6
+        self.pixel_pitch = 15e-6
         self.pixels = (512, 512)
         self.hardware.initialize()
 
+        self.sequence = []
 
-    def generate_stripe_series(self, pitches, phases, thetas, order):
-        pass
+
+    def generate_stripe_series(self, patternparms):
+        """ Generate a stripe series from the patternparms.
+
+        patternparms is a list of tuples:  (pitch, angle, phase),
+        where pitch is in microns, and both the angle and phase are specified
+        in radians.
+        """
+        self.sequence = []
+        for realpitch, angle, phase in patternparms:
+            pitch = realpitch / self.pixel_pitch
+
+      
 
 
     def load_calibration_data(self):
@@ -111,8 +93,8 @@ class SLM(object):
 
 
     def load_images(self):
-        pass
-
+        hardware.load_sequence(self.sequence)
+        
 
     def run(self):
         self.hardware.power = True
