@@ -4,7 +4,7 @@ from bnsdummy import BNSDevice
 from itertools import chain, product
 import os, re, numpy
 from PIL import Image
-
+from numpy import arange, cos, sin, pi, round, meshgrid, zeros
 
 class SpatialLightModulator(object):
     def __init__(self):
@@ -16,7 +16,7 @@ class SpatialLightModulator(object):
         self.load_calibration_data()
 
         self.hardware = BNSDevice()
-        self.pixel_pitch = 15e-6
+        self.pixel_pitch = 15.0 # in microns
         self.pixels = (512, 512)
         self.hardware.initialize()
 
@@ -31,9 +31,14 @@ class SpatialLightModulator(object):
         in radians.
         """
         self.sequence = []
+        xindices = arange(self.pixels[0])
+        yindices = arange(self.pixels[1])
+        kk, ll = meshgrid (xindices, yindices)
         for realpitch, angle, phase in patternparms:
             pitch = realpitch / self.pixel_pitch
-
+            pattern = round(32767.5 + 32767.5 * cos(phase +
+                        2 * pi * (cos(angle) * kk + sin(angle) * ll) / pitch))
+            self.sequence.append(pattern)
       
 
 
