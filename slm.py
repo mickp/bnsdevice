@@ -4,7 +4,7 @@ from bnsdummy import BNSDevice
 from itertools import chain, product
 import os, re, numpy
 from PIL import Image
-from numpy import arange, cos, sin, pi, round, meshgrid, zeros
+from numpy import arange, cos, sin, pi, rint, meshgrid, zeros
 
 class SpatialLightModulator(object):
     def __init__(self):
@@ -36,7 +36,7 @@ class SpatialLightModulator(object):
         kk, ll = meshgrid (xindices, yindices)
         for realpitch, angle, phase in patternparms:
             pitch = realpitch / self.pixel_pitch
-            pattern = round(32767.5 + 32767.5 * cos(phase +
+            pattern = rint(32767.5 + 32767.5 * cos(phase +
                         2 * pi * (cos(angle) * kk + sin(angle) * ll) / pitch))
             self.sequence.append(pattern)
       
@@ -100,8 +100,22 @@ class SpatialLightModulator(object):
 
 
     def load_images(self):
-        hardware.load_sequence(self.sequence)
-        
+        if not self.sequence:
+            raise Exception(
+                'No data to load to SLM --- generate sequence then load.')
+        elif len(self.sequence) == 1:
+            ## single image - does not need reshaping
+            try:
+                self.hardware.write_image(self.sequence[0])
+            except:
+                raise
+        else:
+            try:
+                self.hardware.load_sequence([
+                    numpy.reshape(pattern, -1) for pattern in self.sequence])
+            except:
+                raise
+
 
     def run(self):
         self.hardware.power = True
