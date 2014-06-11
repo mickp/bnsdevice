@@ -1,3 +1,5 @@
+""" Wrapper around BNS Interface.dll """
+
 from bnsdummy import BNSDevice
 from itertools import chain, product
 import os, re, numpy
@@ -37,14 +39,14 @@ class SpatialLightModulator(object):
 
     def load_calibration_data(self):
         """ Loads any calibration data found below module path. """
-        
+
         modpath = os.path.dirname(__file__)
         pattern = '(?P<slm>slm)(?P<serial>[0-9]{2,4})_(?P<wavelength>[0-9]{2,4})'
 
         path = os.path.join(modpath, self._calibrationFolder)
         if os.path.exists(path):
             # load calibration files
-            files = os.listdir(path)            
+            files = os.listdir(path)
             for f in files:
                 try:
                     im = Image.open(os.path.join(path, f))
@@ -70,14 +72,14 @@ class SpatialLightModulator(object):
 
         path = os.path.join(modpath, self._LUTFolder)
         if os.path.exists(path):
-            files = os.listdir(path)            
+            files = os.listdir(path)
             for f in files:
                 try:
                     lut = {}
                     lut['filename'] = f
                     lut['name'] = os.path.splitext(f)[0]
                     lut['data'] = numpy.loadtxt(os.path.join(path, f))
-    
+
                     match = re.match(pattern, f)
                     if match:
                         lut['wavelength'] = match.group('wavelength')
