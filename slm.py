@@ -12,7 +12,7 @@ class SpatialLightModulator(object):
         self.calibs = {}
         self.pixel_pitch = 15.0 # in microns
         self.pixels = (512, 512)
- 
+
         self._LUTFolder = "LUT_files"
         self._calibrationFolder = "Phase_Calibration_Files"
         self.load_calibration_data()
@@ -33,13 +33,13 @@ class SpatialLightModulator(object):
         self.sequence = []
         xindices = arange(self.pixels[0])
         yindices = arange(self.pixels[1])
-        kk, ll = meshgrid (xindices, yindices)
+        kk, ll = meshgrid(xindices, yindices)
         for realpitch, angle, phase in patternparms:
             pitch = realpitch / self.pixel_pitch
-            pattern = rint(32767.5 + 32767.5 * cos(phase +
-                        2 * pi * (cos(angle) * kk + sin(angle) * ll) / pitch))
+            pattern = numpy.ushort(
+                    rint(32767.5 + 32767.5 * cos(phase +
+                    2 * pi * (cos(angle) * kk + sin(angle) * ll) / pitch)))
             self.sequence.append(pattern)
-      
 
 
     def load_calibration_data(self):
@@ -112,7 +112,8 @@ class SpatialLightModulator(object):
         else:
             try:
                 self.hardware.load_sequence([
-                    numpy.reshape(pattern, -1) for pattern in self.sequence])
+                    numpy.reshape(pattern, -1).tolist()
+                    for pattern in self.sequence])
             except:
                 raise
 
