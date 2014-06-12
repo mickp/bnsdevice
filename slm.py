@@ -10,14 +10,14 @@ class SpatialLightModulator(object):
     def __init__(self):
         self.LUTs = {}
         self.calibs = {}
-
+        self.pixel_pitch = 15.0 # in microns
+        self.pixels = (512, 512)
+ 
         self._LUTFolder = "LUT_files"
         self._calibrationFolder = "Phase_Calibration_Files"
         self.load_calibration_data()
 
         self.hardware = BNSDevice()
-        self.pixel_pitch = 15.0 # in microns
-        self.pixels = (512, 512)
         self.hardware.initialize()
 
         self.sequence = []
