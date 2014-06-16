@@ -26,15 +26,15 @@ class SpatialLightModulator(object):
     def generate_stripe_series(self, patternparms):
         """ Generate a stripe series from the patternparms.
 
-        patternparms is a list of tuples:  (pitch, angle, phase),
+        patternparms is a list of tuples:  (pitch, angle, phase, wavelength),
         where pitch is in microns, and both the angle and phase are specified
-        in radians.
+        in radians.  
         """
         self.sequence = []
         xindices = arange(self.pixels[0])
         yindices = arange(self.pixels[1])
         kk, ll = meshgrid(xindices, yindices)
-        for realpitch, angle, phase in patternparms:
+        for realpitch, angle, phase, wavelength in patternparms:
             pitch = realpitch / self.pixel_pitch
             pattern = numpy.ushort(
                     rint(32767.5 + 32767.5 * cos(phase +
