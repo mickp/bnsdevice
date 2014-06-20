@@ -1,6 +1,6 @@
 """ Wrapper around BNS Interface.dll """
 
-from bnsdummy import BNSDevice
+from bnsdevice import BNSDevice
 from itertools import chain, product
 import os, re, numpy
 from PIL import Image
@@ -40,7 +40,7 @@ class SpatialLightModulator(object):
                     rint(32767.5 + 32767.5 * cos(phase +
                     2 * pi * (cos(angle) * kk + sin(angle) * ll) / pitch)))
             self.sequence.append(pattern)
-
+        return self.sequence.len()
 
     def load_calibration_data(self):
         """ Loads any calibration data found below module path. """
@@ -97,7 +97,7 @@ class SpatialLightModulator(object):
                     pass
                 except:
                     raise
-
+        return None
 
     def load_images(self):
         if not self.sequence:
@@ -116,14 +116,17 @@ class SpatialLightModulator(object):
                     for pattern in self.sequence])
             except:
                 raise
+        return None
 
 
     def run(self):
         self.hardware.power = True
         self.hardware.start_sequence()
+        return None
 
 
     def stop(self):
         self.hardware.stop_sequence()
         self.hardware.power = False
+        return None
 
