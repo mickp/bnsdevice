@@ -130,3 +130,11 @@ class SpatialLightModulator(object):
         self.hardware.power = False
         return None
 
+import socket, threading
+slm = SpatialLightModulator()
+port = 7070
+daemon = Pyro4.Daemon(port = port,
+    host = socket.gethostbyname(socket.gethostname()))
+threading.Thread(target = Pyro4.Daemon.ServeSimple,
+    args = [{slm: 'pyroSLM'}0,
+    kwargs = {'daemon': daemon, 'ns': False, 'verbose': True}).start()
