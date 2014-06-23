@@ -40,7 +40,7 @@ class SpatialLightModulator(object):
                     rint(32767.5 + 32767.5 * cos(phase +
                     2 * pi * (cos(angle) * kk + sin(angle) * ll) / pitch)))
             self.sequence.append(pattern)
-        return self.sequence.len()
+        return len(self.sequence)
 
     def load_calibration_data(self):
         """ Loads any calibration data found below module path. """
