@@ -1,4 +1,7 @@
-""" Wrapper around BNS Interface.dll """
+""" Provides acces to an SLM device via Pyro. 
+
+Mick Phillips, 2014.
+"""
 
 from bnsdevice import BNSDevice
 from itertools import chain, product
@@ -42,9 +45,9 @@ class SpatialLightModulator(object):
             self.sequence.append(pattern)
         return len(self.sequence)
 
+
     def load_calibration_data(self):
         """ Loads any calibration data found below module path. """
-
         modpath = os.path.dirname(__file__)
         pattern = '(?P<slm>slm)(?P<serial>[0-9]{2,4})_(?P<wavelength>[0-9]{2,4})'
 
@@ -100,6 +103,7 @@ class SpatialLightModulator(object):
         return None
 
     def load_images(self):
+        """ Loads images to the device. """
         if not self.sequence:
             raise Exception(
                 'No data to load to SLM --- generate sequence then load.')
@@ -120,12 +124,14 @@ class SpatialLightModulator(object):
 
 
     def run(self):
+        """ Power on and make device respond to triggers. """
         self.hardware.power = True
         self.hardware.start_sequence()
         return None
 
 
     def stop(self):
+        """ Power off and stop device responding to triggers. """
         self.hardware.stop_sequence()
         self.hardware.power = False
         return None
@@ -136,5 +142,5 @@ port = 7070
 daemon = Pyro4.Daemon(port = port,
     host = socket.gethostbyname(socket.gethostname()))
 threading.Thread(target = Pyro4.Daemon.ServeSimple,
-    args = [{slm: 'pyroSLM'}0,
+    args = [{slm: 'pyroSLM'}],
     kwargs = {'daemon': daemon, 'ns': False, 'verbose': True}).start()
