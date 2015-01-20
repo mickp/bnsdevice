@@ -5,9 +5,14 @@ Mick Phillips, 2014.
 
 from bnsdevice import BNSDevice
 from itertools import chain, product
+import socket, threading
 import os, re, numpy
+import Pyro4
 from PIL import Image
 from numpy import arange, cos, sin, pi, rint, meshgrid, zeros
+from time import sleep
+
+CONFIG_NAME = 'slm'
 
 class SpatialLightModulator(object):
     def __init__(self):
@@ -136,11 +141,48 @@ class SpatialLightModulator(object):
         self.hardware.power = False
         return None
 
-import socket, threading
-slm = SpatialLightModulator()
-port = 7070
-daemon = Pyro4.Daemon(port = port,
-    host = socket.gethostbyname(socket.gethostname()))
-threading.Thread(target = Pyro4.Daemon.ServeSimple,
-    args = [{slm: 'pyroSLM'}],
-    kwargs = {'daemon': daemon, 'ns': False, 'verbose': True}).start()
+
+class Server(object):
+    def __init__(self):
+        self.server = None
+        self.daemon_thread = None
+        self.config = None
+        self.run_flag = True
+
+    def __del__(self):
+        self.run_flag = False
+        if self.daemon_thread:
+            self.daemon_thread.join()
+
+
+    def run(self):
+        import readconfig
+        config = readconfig.config
+
+        host = config.get(CONFIG_NAME, 'ipAddress')
+        port = config.getint(CONFIG_NAME, 'port')
+
+        self.server = SpatialLightModulator()
+
+        daemon = Pyro4.Daemon(port=port, host=host)
+
+        # Start the daemon in a new thread.
+        self.daemon_thread = threading.Thread(
+            target=Pyro4.Daemon.serveSimple,
+            args = ({self.server: 'pyroSLM'},),
+            kwargs = {'daemon': daemon, 'ns': False}
+            )
+        self.daemon_thread.start()
+
+        # Wait until run_flag is set to False.
+        while self.run_flag:
+            sleep(1)
+
+        # Do any cleanup.
+        daemon.shutdown()
+
+        self.daemon_thread.join()
+
+
+    def stop(self):
+        self.run_flag = False

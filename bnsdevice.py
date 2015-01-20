@@ -17,6 +17,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 import ctypes
+import os, sys
 from ctypes import c_int, c_bool, c_double, c_short
 from ctypes import c_char, c_char_p, c_uint, c_ushort, windll
 
@@ -60,9 +61,11 @@ class BNSDevice(object):
     """
 
     def __init__(self):
+        # Must chdir to module path or DLL can not find its dependencies.
+        modpath = os.path.dirname(__file__)
+        os.chdir(modpath)
         # path to dll
-        self.libPath = "PCIe16Interface"
-        
+        self.libPath = os.path.join(modpath, "PCIe16Interface")
         # loaded library instance
         # Now loaded here so that read_tiff is accessible even if there is no 
         # SLM present.
