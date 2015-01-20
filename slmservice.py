@@ -142,6 +142,19 @@ class SpatialLightModulator(object):
         return None
 
 
+    def get_temperature(self):
+        return self.hardware.temperature
+
+
+    def get_power(self):
+        return self.hardware.power
+
+
+    def get_current_image_index(self):
+        return self.hardware.curr_seq_image
+
+
+
 class Server(object):
     def __init__(self):
         self.server = None
