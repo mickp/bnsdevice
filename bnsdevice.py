@@ -74,7 +74,6 @@ class BNSDevice(object):
         # Now loaded here so that read_tiff is accessible even if there is no 
         # SLM present.
         self.lib = ctypes.WinDLL(self.libPath)
-
         # Boolean showing initialization status.
         self.haveSLM = False
 
@@ -217,8 +216,8 @@ class BNSDevice(object):
         
         ## Not sure what type to pass the  CAL_TYPE as ... this is an ENUM, so
         # could be compiler / platform dependent.
-        # 0 = WFC = wavefront correction
-        # 1 = NUC = non-uniformity correction.
+        # 1 = WFC = wavefront correction
+        # 0 = NUC = non-uniformity correction.
 
         ## Image is a 1D array containing values from the 2D image.
         # image = (c_char * len(calImage))(*calImage)
