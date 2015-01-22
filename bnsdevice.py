@@ -62,8 +62,12 @@ class BNSDevice(object):
 
     def __init__(self):
         # Must chdir to module path or DLL can not find its dependencies.
-        modpath = os.path.dirname(__file__)
-        os.chdir(modpath)
+        try:
+            modpath = os.path.dirname(__file__)
+            os.chdir(modpath)
+        except:
+            # Probably running from interactive shell
+            modpath = ''
         # path to dll
         self.libPath = os.path.join(modpath, "PCIe16Interface")
         # loaded library instance
