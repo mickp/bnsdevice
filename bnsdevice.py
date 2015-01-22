@@ -170,26 +170,20 @@ class BNSDevice(object):
                             "images - it was passed %s images." 
                             % len(imageList))
 
-        ## Need to make a 1D array of shorts containing the image data.
+        # Make a contiguous array.
+        sequence = (self.imagetype * len(imageList))(*imageList)
 
-        ## Turn imageList into a single list, 
-        # then make that into an array of c_shorts.
-        # (c_short * length)(*array)
-        images = (c_short * sum(
-                  len(image) for image in imageList))(*sum(imageList, []))
-
-        ## Now pass this by reference to the DLL function.
         # LoadSequence (int Board, unsigned short* Image, int NumberOfImages)
-        self.lib.LoadSequence(c_int(0), ctypes.byref(images), 
+        self.lib.LoadSequence(c_int(0), ctypes.byref(sequence), 
                               c_int(len(imageList)))
 
 
-    def read_tiff(self, filePath, width, height):
+    def read_tiff(self, filePath):
         ## void ReadTIFF (const char* FilePath, unsigned short* ImageData,
         #                unsigned int ScaleWidth, unsigned int ScaleHeight) 
-        buffer = (c_ushort * width * height)()
+        buffer = self.imagetype()
         self.lib.ReadTIFF(c_char_p(filePath), buffer, 
-                          c_uint(width), c_uint(height))
+                          self.size, self.size)
         return buffer
 
 
@@ -230,7 +224,8 @@ class BNSDevice(object):
         # Doesn't seem to like c_char, which doesn't make sense anyway, as
         # the calibration files are 16-bit.
         # Header file states it's an unsigned short.
-        image = (c_ushort * len(calImage))(*calImage)
+        
+        image = self.imagetype(*calImage)
         self.lib.WriteCal(c_int(0), c_int(type), ctypes.byref(image))
 
 
@@ -238,4 +233,4 @@ class BNSDevice(object):
     def write_image(self, image): #tested - works
     ## void WriteImage (int Board, unsigned short* Image)
         self.lib.WriteImage(c_int(0), 
-                            ctypes.byref((c_short * len(image))(*image)))
+                            ctypes.byref(self.imagetype(*image)))
