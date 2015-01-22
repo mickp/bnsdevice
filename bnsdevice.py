@@ -125,27 +125,26 @@ class BNSDevice(object):
 
 
     def initialize(self): #tested
-        try:
-            ## Need to unload and reload the DLL here.
-            # Otherwise, the DLL can open an error window about having already
-            # initialized another DLL, which we won't see on a remote machine.
-            if self.lib:
-                while(windll.kernel32.FreeLibrary(self.lib._handle)):
-                    # Keep calling FreeLibrary until library is really closed.
-                    pass
-            
+        ## Need to unload and reload the DLL here.
+        # Otherwise, the DLL can open an error window about having already
+        # initialized another DLL, which we won't see on a remote machine.
+        if self.lib:
+            while(windll.kernel32.FreeLibrary(self.lib._handle)):
+                # Keep calling FreeLibrary until library is really closed.
+                pass
+        try:      
             # re-open the DLL
             self.lib = ctypes.WinDLL(self.libPath)
-            
-            # Initlialize the library, looking for nematic SLMs.
-            n = self.lib.Constructor(c_int(1)) 
-            if n == 0:
-                raise Exception("No SLM device found.")
-            elif n > 1:
-                raise Exception("More than one SLM device found. This module "\
-                                "can only handle one device.")
-        except Exception as e:
+        except:
             raise
+        
+        # Initlialize the library, looking for nematic SLMs.
+        n = self.lib.Constructor(c_int(1)) 
+        if n == 0:
+            raise Exception("No SLM device found.")
+        elif n > 1:
+            raise Exception("More than one SLM device found. This module "\
+                            "can only handle one device.")
         else:
             self.haveSLM = True
 
