@@ -23,6 +23,8 @@ from ctypes import c_char, c_char_p, c_uint, c_ushort, windll
 
 CLASS_NAME = "BNSDevice"
 
+bnsdatatype = ctypes.c_uint16
+
 class BNSDevice(object):
     """ Enables calls to functions in BNS's Interface.dll.
 
@@ -76,6 +78,8 @@ class BNSDevice(object):
         self.lib = ctypes.WinDLL(self.libPath)
         # Boolean showing initialization status.
         self.haveSLM = False
+        # Data type to store images.
+        self.imagetype = None
 
     ## === DECORATORS === #
     # decorator definition for methods that require an SLM      
@@ -146,6 +150,8 @@ class BNSDevice(object):
                             "can only handle one device.")
         else:
             self.haveSLM = True
+            self.size = self.lib.GetImageSize(0)
+            self.imagetype = bnsdatatype * (self.size * self.size)
 
 
     @requires_slm
