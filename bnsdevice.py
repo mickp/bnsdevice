@@ -18,6 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import ctypes
 import os, sys
+import numpy as np
 from ctypes import c_int, c_bool, c_double, c_short
 from ctypes import c_char, c_char_p, c_uint, c_ushort, windll
 
@@ -170,9 +171,21 @@ class BNSDevice(object):
                             "images - it was passed %s images." 
                             % len(imageList))
 
+        if all([type(image) is self.imagetype for image in imageList]):
+            # Data is fine as it is.
+            pass            
+        else:
+            # Some images need converting.
+            flatImages = []
+            for image in imageList:
+                if type(image) is np.ndarray:
+                    flatImages.append(self.imagetype(*image.flatten()))
+                else:
+                    flatImages.append(self.imagetype(*image))
+            imageList = flatImages
+
         # Make a contiguous array.
         sequence = (self.imagetype * len(imageList))(*imageList)
-
         # LoadSequence (int Board, unsigned short* Image, int NumberOfImages)
         self.lib.LoadSequence(c_int(0), ctypes.byref(sequence), 
                               c_int(len(imageList)))
@@ -232,5 +245,10 @@ class BNSDevice(object):
     @requires_slm
     def write_image(self, image): #tested - works
     ## void WriteImage (int Board, unsigned short* Image)
-        self.lib.WriteImage(c_int(0), 
-                            ctypes.byref(self.imagetype(*image)))
+        if type(image) is self.imagetype:
+            self.lib.WriteImage(c_int(0), 
+                                ctypes.byref(self.imagetype(*image)))
+        elif type(image) is np.ndarray:
+            self.lib.WriteImage(0, self.imagetype(*image.flatten()))
+        else:
+            raise Exception('Unable to convert image.')
