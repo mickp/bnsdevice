@@ -37,10 +37,34 @@ class SpatialLightModulator(object):
         self._calibrationFolder = "Phase_Calibration_Files"
         self.load_calibration_data()
 
-        self.hardware = BNSDevice()
+        self.hardware = BNSDevice()     
         self.hardware.initialize()
+        #self.hardware.load_lut('linear.lut')
 
         self.sequence = []
+
+
+    def generate_test_sequence(self, low, high):
+        low = min(low * (low > 0), high * (high > 0))
+        high = max(65535, low * (low > 0), high * (high > 0))
+
+        self.sequence = []
+        xindices = arange(self.pixels[0])
+        yindices = arange(self.pixels[1])
+        kk, ll = meshgrid(xindices, yindices)
+        for i in range(3):
+            pattern = numpy.ushort(
+                low + (high - low) * 
+                (kk % (self.pixels[0] / (i+1)) / (self.pixels[0] - 1))
+                )
+            self.sequence.append(pattern)
+        for j in range(3):
+            pattern = numpy.ushort(
+                ll % (self.pixels[1] / (j+1))
+                )
+            self.sequence.append(pattern)
+        return len(self.sequence)
+
 
 
     def generate_stripe_series(self, patternparms):
@@ -119,24 +143,13 @@ class SpatialLightModulator(object):
                     raise
         return None
 
-    def load_images(self):
+    def load_sequence(self):
         """ Loads images to the device. """
         if not self.sequence:
             raise Exception(
                 'No data to load to SLM --- generate sequence then load.')
-        elif len(self.sequence) == 1:
-            ## single image - does not need reshaping
-            try:
-                self.hardware.write_image(self.sequence[0])
-            except:
-                raise
         else:
-            try:
-                self.hardware.load_sequence([
-                    numpy.reshape(pattern, -1).tolist()
-                    for pattern in self.sequence])
-            except:
-                raise
+            self.hardware.load_sequence(self.sequence)
         return None
 
 
