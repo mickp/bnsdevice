@@ -19,7 +19,33 @@ import bnsdevice as bns
 import numpy as np
 import ctypes
 from time import sleep
-from numpy import rint, cos, sin, pi
+from numpy import rint, cos, sin, pi, meshgrid
+
+
+def generate_stripe_series(patternparms):
+    """ Generate a stripe series from the patternparms.
+
+    patternparms is a list of tuples:  (pitch, angle, phase, wavelength),
+    where pitch is in microns, and both the angle and phase are specified
+    in radians.  
+    """
+    sequence = []
+    xindices = np.arange(512)
+    yindices = np.arange(512)
+    kk, ll = meshgrid(xindices, yindices)
+    for realpitch, angle, phase, wavelength in patternparms:
+        pitch = realpitch / 15.0
+        # Factor to balance m=0,+/-1 orders.
+        mp2 = 1.5 
+        pattern = np.ushort(
+                rint((mp2 / pi) * 32767.5 + 32767.5 * cos(phase +
+                2 * pi * (cos(angle) * kk + sin(angle) * ll) / pitch)))
+        # Scale to green LUT range
+        sequence *= 16256. / 65535.
+        sequence += 49279.
+        sequence.append(pattern)
+    return sequence
+
 
 dev = bns.BNSDevice()
 dev.initialize()
@@ -36,12 +62,12 @@ images.append(dev.read_tiff('16Comax.tiff'))
 dev.write_image(images[0])
 dev.power = True
 
-sleep(5)
+#sleep(5)
 
 dev.load_sequence(images)
 dev.start_sequence()
 
-sleep(5)
+#sleep(5)
 
 ind = np.arange(512)
 kk, ll = np.meshgrid(ind, ind)
@@ -54,7 +80,7 @@ dev.stop_sequence()
 
 dev.write_image(ndarray_images[0])
 
-sleep(5)
+#sleep(5)
 
 dev.load_sequence(ndarray_images)
 dev.start_sequence()
