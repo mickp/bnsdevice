@@ -17,6 +17,7 @@ limitations under the License.
 
 from bnsdevice import BNSDevice
 from itertools import chain, product
+import logging
 import socket, threading
 import os, re, numpy
 import Pyro4
@@ -25,9 +26,21 @@ from numpy import arange, cos, sin, pi, rint, meshgrid, zeros
 from time import sleep
 
 CONFIG_NAME = 'slm'
+LOG_FORMAT = '%(asctime)s %(name)-12s %(levelname)-8s %(message)s'
+LOG_DATE_FORMAT = '%m-%d %H:%M'
+
+logging.basicConfig(level=logging.DEBUG,
+                    format=LOG_FORMAT,
+                    datefmt=LOG_DATE_FORMAT,
+                    filename='slmservice.log',
+                    filemode='w')
+
 
 class SpatialLightModulator(object):
     def __init__(self):
+        loggerName = '.'.join([__name__, self.__class__.__name__])
+        self.logger = logging.getLogger(loggerName)
+        
         self.LUTs = {}
         self.calibs = {}
         self.pixel_pitch = 15.0 # in microns
@@ -92,56 +105,58 @@ class SpatialLightModulator(object):
         modpath = os.path.dirname(__file__)
         pattern = '(?P<slm>slm)(?P<serial>[0-9]{2,4})_(?P<wavelength>[0-9]{2,4})'
 
+        ## Load any calibration files.
         path = os.path.join(modpath, self._calibrationFolder)
         if os.path.exists(path):
-            # load calibration files
             files = os.listdir(path)
             for f in files:
                 try:
                     im = Image.open(os.path.join(path, f))
-                    if im.size == self.pixels:
-                        calib = {}
-                        calib['filename'] = f
-                        calib['name'] = os.path.splitext(f)[0]
-                        calib['data'] = numpy.array(im)
-
-                        match = re.match(pattern, f)
-                        if match:
-                            calib['wavelength'] = match.group('wavelength')
-                            self.calibs[calib['wavelength']] = calib
-                        else:
-                            calib['wavelength'] = 0
-                            self.calibs[calib['name'].lower()] = calib
-
                 except IOError:
-                    # couldn't open the image file
-                    pass
+                    self.logger.error('Could not open calibration file %s.' % f)
+                    next
                 except:
                     raise
 
+                if im.size == self.pixels:
+                    calib = {}
+                    calib['filename'] = f
+                    calib['name'] = os.path.splitext(f)[0]
+                    calib['data'] = numpy.array(im)
+
+                    match = re.match(pattern, f)
+                    if match:
+                        calib['wavelength'] = match.group('wavelength')
+                        self.calibs[calib['wavelength']] = calib
+                    else:
+                        calib['wavelength'] = 0
+                        self.calibs[calib['name'].lower()] = calib
+
+        ## Load any lookup tables.
         path = os.path.join(modpath, self._LUTFolder)
         if os.path.exists(path):
             files = os.listdir(path)
             for f in files:
+                lut = {}
+                lut['filename'] = f
+                lut['name'] = os.path.splitext(f)[0]
                 try:
-                    lut = {}
-                    lut['filename'] = f
-                    lut['name'] = os.path.splitext(f)[0]
                     lut['data'] = numpy.loadtxt(os.path.join(path, f))
-
-                    match = re.match(pattern, f)
-                    if match:
-                        lut['wavelength'] = match.group('wavelength')
-                        self.LUTs[lut['wavelength']] = lut
-                    else:
-                        lut['wavelength'] = 0
-                        self.LUTs[lut['name'].lower()] = lut
                 except IOError:
-                    # couldn't open the file
-                    pass
+                    self.logger.log('Could not load LUT %s.' % f)
+                    next
                 except:
                     raise
+
+                match = re.match(pattern, f)
+                if match:
+                    lut['wavelength'] = match.group('wavelength')
+                    self.LUTs[lut['wavelength']] = lut
+                else:
+                    lut['wavelength'] = 0
+                    self.LUTs[lut['name'].lower()] = lut
         return None
+
 
     def load_sequence(self):
         """ Loads images to the device. """
