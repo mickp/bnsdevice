@@ -18,8 +18,15 @@ limitations under the License.
 import bnsdevice as bns
 import numpy as np
 import ctypes
+import os
 from time import sleep
 from numpy import rint, cos, sin, pi, meshgrid
+
+
+MOD_PATH = os.path.dirname(__file__)
+LUT_PATH = os.path.join(MOD_PATH, 'LUT_files')
+CAL_PATH = os.path.join(MOD_PATH, 'Phase_Calibration_files')
+TEST_PATH = os.path.join(MOD_PATH, 'Test_files')
 
 
 def generate_stripe_series(patternparms):
@@ -47,28 +54,27 @@ def generate_stripe_series(patternparms):
     return sequence
 
 
+# Load a LUT.
 dev = bns.BNSDevice()
 dev.initialize()
-dev.load_lut('linear.lut')
+print "Loadint LUT %s." % os.path.join(LUT_PATH, 'linear.lut')
+dev.load_lut(os.path.join(LUT_PATH, 'linear.lut'))
 
-cal = dev.read_tiff('white.tiff')
+# Set the calibration to flat.
+cal = dev.read_tiff(os.path.join(TEST_PATH, 'white.tiff'))
 dev.write_cal(1, cal)
 
+
+# Generate test images from TIFFs.
 images = []
-images.append(dev.read_tiff('16Astigx.tiff'))
-images.append(dev.read_tiff('StripePer16.tiff'))
-images.append(dev.read_tiff('16Comax.tiff'))
+test_files = os.listdir(TEST_PATH)
+print "Loading test files:"
+for f in test_files:
+    print "  %s" % f
+    images.append(dev.read_tiff(f))
 
-dev.write_image(images[0])
-dev.power = True
 
-#sleep(5)
-
-dev.load_sequence(images)
-dev.start_sequence()
-
-#sleep(5)
-
+# Numerically-generated test images.
 ind = np.arange(512)
 kk, ll = np.meshgrid(ind, ind)
 ndarray_images = []
@@ -76,11 +82,28 @@ ndarray_images.append(np.ushort(32767 + ((kk % 32) > 15) * 65535/2))
 ndarray_images.append(np.ushort(32767 + (((kk + ll) % 48) > 23 )* 65535/2))
 ndarray_images.append(np.ushort(32767 + ((ll % 32) > 15) * 65535/2))
 
+
+# Show a single TIFF-derived image for five seconds.
+print "Single image from TIFF."
+dev.write_image(images[0])
+dev.power = True
+sleep(5)
+
+# Run the TIFF-derived cycle for five seconds.
+print "TIFF series"
+dev.load_sequence(images)
+dev.start_sequence()
+sleep(5)
+
+
 dev.stop_sequence()
 
+# Show a single numerically-generated image for five seconds.
+print "Single image from ndarray."
 dev.write_image(ndarray_images[0])
 
-#sleep(5)
-
+# Run the numerically-generated series for five seconds
+print "ndarray series."
 dev.load_sequence(ndarray_images)
 dev.start_sequence()
+sleep(5)
