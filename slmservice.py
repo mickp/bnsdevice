@@ -29,7 +29,7 @@ CONFIG_NAME = 'slm'
 LOG_FORMAT = '%(asctime)s %(name)-12s %(levelname)-8s %(message)s'
 LOG_DATE_FORMAT = '%m-%d %H:%M'
 
-logging.basicConfig(level=logging.DEBUG,
+logging.basicConfig(level=logging.INFO,
                     format=LOG_FORMAT,
                     datefmt=LOG_DATE_FORMAT,
                     filename='slmservice.log',
@@ -102,59 +102,82 @@ class SpatialLightModulator(object):
 
     def load_calibration_data(self):
         """ Loads any calibration data found below module path. """
+        # module path
         modpath = os.path.dirname(__file__)
-        pattern = '(?P<slm>slm)(?P<serial>[0-9]{2,4})_(?P<wavelength>[0-9]{2,4})'
+        # filename format
+        pattern = r'(slm)?(?P<serial>[0-9]+)[_](at(?P<wavelength>[0-9]+))'
 
-        ## Load any calibration files.
+        ## Find calibration files
         path = os.path.join(modpath, self._calibrationFolder)
         if os.path.exists(path):
             files = os.listdir(path)
-            for f in files:
+            matches = [re.match(pattern, f) for f in files]
+        else:
+            files = []
+            matches = []
+
+        ## Load any calibration files
+        self.logger.info('Loading calibration files:')
+        for f, match in zip(files, matches):
+            if not match:
+                # Not a calibration file.
+                self.logger.warning('\tignoring %s' % f)
+                continue
+            try:
+                im = Image.open(os.path.join(path, f))
+            except IOError:
+                self.logger.error('\tcould not open %s' % f)
+                continue
+            except:
+                raise
+
+            if im.size == self.pixels:
+                calib = {}
+                calib['filename'] = f
+                calib['name'] = os.path.splitext(f)[0]
                 try:
-                    im = Image.open(os.path.join(path, f))
-                except IOError:
-                    self.logger.error('Could not open calibration file %s.' % f)
-                    next
-                except:
-                    raise
-
-                if im.size == self.pixels:
-                    calib = {}
-                    calib['filename'] = f
-                    calib['name'] = os.path.splitext(f)[0]
                     calib['data'] = numpy.array(im)
+                except:
+                    # Not a calibration file.
+                    continue
 
-                    match = re.match(pattern, f)
-                    if match:
-                        calib['wavelength'] = match.group('wavelength')
-                        self.calibs[calib['wavelength']] = calib
-                    else:
-                        calib['wavelength'] = 0
-                        self.calibs[calib['name'].lower()] = calib
+            wavelength = match.groupdict()['wavelength']
+            calib['wavelength'] = wavelength
+            self.calibs[wavelength] = calib
+            self.logger.info("\tloaded data from %s." % f)
 
-        ## Load any lookup tables.
+        ## Find lookup table files.        
         path = os.path.join(modpath, self._LUTFolder)
         if os.path.exists(path):
             files = os.listdir(path)
-            for f in files:
-                lut = {}
-                lut['filename'] = f
-                lut['name'] = os.path.splitext(f)[0]
-                try:
-                    lut['data'] = numpy.loadtxt(os.path.join(path, f))
-                except IOError:
-                    self.logger.log('Could not load LUT %s.' % f)
-                    next
-                except:
-                    raise
+            matches = [re.match(pattern, f) for f in files]
+        else:
+            files = []
+            matches = []
 
-                match = re.match(pattern, f)
-                if match:
-                    lut['wavelength'] = match.group('wavelength')
-                    self.LUTs[lut['wavelength']] = lut
-                else:
-                    lut['wavelength'] = 0
-                    self.LUTs[lut['name'].lower()] = lut
+        self.logger.info('Loading LUT files:')
+        for f, match in zip(files, matches):
+            if not match:
+                # This is not a LUT file.
+                self.logger.warning('\tignoring %s' % f)
+                continue
+
+            lut = {}
+            lut['filename'] = f
+            lut['name'] = os.path.splitext(f)[0]
+            try:
+                lut['data'] = numpy.loadtxt(os.path.join(path, f))
+            except (IOError):
+                self.logger.error('\tcould not open %s' % f)
+                continue
+            except:
+                raise
+
+            wavelength = match.groupdict()['wavelength']
+            lut['wavelength'] = wavelength
+            self.LUTs[wavelength] = lut
+            self.logger.info("\tloaded data from %s" % f)
+
         return None
 
 
