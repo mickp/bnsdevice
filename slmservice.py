@@ -28,6 +28,7 @@ from time import sleep
 CONFIG_NAME = 'slm'
 LOG_FORMAT = '%(asctime)s %(name)-12s %(levelname)-8s %(message)s'
 LOG_DATE_FORMAT = '%m-%d %H:%M'
+TWO_PI = 2. * pi
 
 logging.basicConfig(level=logging.INFO,
                     format=LOG_FORMAT,
@@ -64,6 +65,47 @@ class SpatialLightModulator(object):
         ## Connect to the hardware.
         self.hardware = BNSDevice()     
         self.hardware.initialize()
+
+
+    def generate_stripe_sequence(self, patternparms):
+        """ Generate and store a stripe sequence from the patternparms.
+
+        patternparms is a list of tuples:  
+            realpitch   stripe pitch in microns
+            angle       stripe angle in radians
+            phase       stripe phase in radians
+            waves       retardation in waves
+            wavelength  intended wavelength, for LUT and calib.
+        """
+        sequence = []
+        for realpitch, angle, phase, waves, wavelength in patternparms:
+            
+            # modulation depth as 16-bit integer
+            if waves > 1.:
+                raise Exception ('Retardation > 1 not supported.')
+            modulation = int(waves * 65535)
+            # short name for phase
+            ph = phase
+            # short name for angle
+            th = angle
+            # short name for pitch in pixel units
+            p = realpitch / self.pixel_pitch
+            # centre of 16-bit range
+            c = 32767.5
+            # Create a stripe 16-bit pattern
+            pattern16 = numpy.ushort(
+                rint(
+                    c + c * cos(
+                        ph + TWO_PI *(
+                            cos(th) * self.kk + sin(th) * self.ll
+                        ) / p
+                    )))
+            # Lose two LSBs and pass through the LUT for given wavelength.
+            pattern = self.get_lut(wavelength)[pattern16 / 4]
+            # Append to the sequence.
+            sequence.append(pattern)
+        self.sequence = sequence
+        return len(self.sequence)
 
 
     def get_lut(self, wavelength):
