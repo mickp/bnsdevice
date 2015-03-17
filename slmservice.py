@@ -107,7 +107,7 @@ class SpatialLightModulator(object):
                     # Not a calibration file.
                     continue
 
-            wavelength = match.groupdict()['wavelength']
+            wavelength = int(match.groupdict()['wavelength'])
             calib['wavelength'] = wavelength
             self.calibs[wavelength] = calib
             self.logger.info("\tloaded data from %s." % f)
@@ -139,7 +139,7 @@ class SpatialLightModulator(object):
             except:
                 raise
 
-            wavelength = match.groupdict()['wavelength']
+            wavelength = int(match.groupdict()['wavelength'])
             lut['wavelength'] = wavelength
             self.luts[wavelength] = lut
             self.logger.info("\tloaded data from %s" % f)
