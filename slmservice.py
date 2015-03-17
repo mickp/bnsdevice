@@ -98,18 +98,14 @@ class SpatialLightModulator(object):
                 raise
 
             if im.size == self.pixels:
-                calib = {}
-                calib['filename'] = f
-                calib['name'] = os.path.splitext(f)[0]
                 try:
-                    calib['data'] = numpy.array(im)
+                    calib_data = numpy.array(im)
                 except:
                     # Not a calibration file.
                     continue
 
             wavelength = int(match.groupdict()['wavelength'])
-            calib['wavelength'] = wavelength
-            self.calibs[wavelength] = calib
+            self.calibs[wavelength] = calib_data
             self.logger.info("\tloaded data from %s." % f)
 
         ## Find lookup table files.        
@@ -128,12 +124,9 @@ class SpatialLightModulator(object):
                 self.logger.warning('\tignoring %s' % f)
                 continue
 
-            lut = {}
-            lut['filename'] = f
-            lut['name'] = os.path.splitext(f)[0]
             try:
                 # Load the second column of the LUT into an ndarray.
-                lut['data'] = numpy.loadtxt(os.path.join(path, f), usecols=(1,))
+                lut_data = numpy.loadtxt(os.path.join(path, f), usecols=(1,))
             except (IOError):
                 self.logger.error('\tcould not open %s' % f)
                 continue
@@ -141,8 +134,7 @@ class SpatialLightModulator(object):
                 raise
 
             wavelength = int(match.groupdict()['wavelength'])
-            lut['wavelength'] = wavelength
-            self.luts[wavelength] = lut
+            self.luts[wavelength] = lut_data
             self.logger.info("\tloaded data from %s" % f)
 
         return None
