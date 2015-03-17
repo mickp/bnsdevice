@@ -66,6 +66,13 @@ class SpatialLightModulator(object):
         self.hardware.initialize()
 
 
+    def get_lut(self, wavelength):
+        """ Returns the LUT closest to wavelength. """
+        lut_wavelengths = self.luts.keys()
+        nearest = min(lut_wavelengths, key=lambda x: abs(x - wavelength))
+        return self.luts[nearest]
+
+
     def load_calibration_data(self):
         """ Loads any calibration data found below module path. """
         # module path
