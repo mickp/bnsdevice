@@ -176,8 +176,6 @@ class Server(object):
 
     def __del__(self):
         self.run_flag = False
-        if self.daemon_thread:
-            self.daemon_thread.join()
 
 
     def run(self):
@@ -211,3 +209,19 @@ class Server(object):
 
     def stop(self):
         self.run_flag = False
+
+
+def main():
+    server = Server()
+    server_thread = threading.Thread(target = server.run)
+    server_thread.start()
+    try:
+        while True:
+            sleep(1)
+    except (KeyboardInterrupt, SystemExit):
+        server.stop()
+        server_thread.join()
+
+
+if __name__ == '__main__':
+    main()
