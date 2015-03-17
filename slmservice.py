@@ -133,7 +133,9 @@ class SpatialLightModulator(object):
 
             try:
                 # Load the second column of the LUT into an ndarray.
-                lut_data = numpy.loadtxt(os.path.join(path, f), usecols=(1,))
+                lut_data = numpy.loadtxt(os.path.join(path, f), 
+                                         usecols=(1,),
+                                         dtype=numpy.ushort)
             except (IOError):
                 self.logger.error('\tcould not open %s' % f)
                 continue
