@@ -53,6 +53,11 @@ class SpatialLightModulator(object):
         self.kk, self.ll = meshgrid(x_range, y_range)
         ## Image sequence
         self.sequence = []
+        ## SIM parameters
+        self.sim_phase_offset = 0
+        self.sim_angle_offset = TWO_PI / 5.
+        self.sim_num_phases = 5
+        self.sim_num_angles = 3
         ## Look-up tables and calibration data
         # Paths
         self._LUTFolder = "LUT_files"
@@ -65,6 +70,40 @@ class SpatialLightModulator(object):
         ## Connect to the hardware.
         self.hardware = BNSDevice()     
         self.hardware.initialize()
+
+
+    def generate_sim_sequence(self, order=('p','a'), wavelengths=550):
+        """ Generate and store a sequence of SIM grating images.
+
+        'order' is a tuple that specifies the order in which parameters are
+        incremented. It should be a tuple of strings.
+        'wavelengths' is either a single wavelength or list of wavelengths.
+        """
+        ## Validate order
+        if type(wavelengths) in (float, int):
+            # Single wavelength - only need to consider phase and angle.
+            parameters = 'pa' # only need phase and angle.
+        elif type(wavelengths) is list:
+            # Multiple wavelenths - need phase, angle and wavelength
+            parameters = 'paw'
+        try:
+            order = tuple(s.lower()[0] for s in order)
+        except:
+            raise Exception('order should be a 2- or 3-tuple of strings')
+        if any(order.count(letter) < 1 for letter in parameters):
+            raise Exception('Missing a paramter from order.')
+        elif any(order.count(letter) > 1 for letter in parameters):
+            raise Exception('Each parameter in order must occur exactly once.')
+        else:
+            # might have an unnecessary wavelength
+            order = tuple(letter for letter in order if letter in parameters)
+
+
+        phases = [self.sim_phase_offset + n * TWO_PI / self.sim_num_phases
+                    for n in xrange(self.sim_num_phases)]
+        angles = [self.sim_angle_offset + n * TWO_PI / self.sim_num_angles
+                    for n in xrange(self.sim_num_angles)]
+        ## INCOMPLETE ##
 
 
     def generate_stripe_sequence(self, patternparms):
