@@ -58,6 +58,7 @@ class SpatialLightModulator(object):
         self.sim_angle_offset = TWO_PI / 5.
         self.sim_num_phases = 5
         self.sim_num_angles = 3
+        self.sim_diffraction_angle = 0.5 # degrees
         ## Look-up tables and calibration data
         # Paths
         self._LUTFolder = "LUT_files"
@@ -79,31 +80,59 @@ class SpatialLightModulator(object):
         incremented. It should be a tuple of strings.
         'wavelengths' is either a single wavelength or list of wavelengths.
         """
-        ## Validate order
-        if type(wavelengths) in (float, int):
-            # Single wavelength - only need to consider phase and angle.
-            parameters = 'pa' # only need phase and angle.
-        elif type(wavelengths) is list:
-            # Multiple wavelenths - need phase, angle and wavelength
-            parameters = 'paw'
+        param_labels = 'paw'
+        ## Convert order to list of single characters.
         try:
-            order = tuple(s.lower()[0] for s in order)
+            order = [s.lower()[0] for s in order]
         except:
             raise Exception('order should be a 2- or 3-tuple of strings')
-        if any(order.count(letter) < 1 for letter in parameters):
-            raise Exception('Missing a paramter from order.')
-        elif any(order.count(letter) > 1 for letter in parameters):
+
+        ## Handle the single wavelength case.
+        if type(wavelengths) in (float, int):
+            # Need this to be a list later.
+            wavelengths = [wavelengths]
+            if 'w' not in order:
+                # Make wavelength the innermost parameter.
+                order.append('w')
+
+        ## Validate order.
+        if any(order.count(letter) < 1 for letter in param_labels):
+            raise Exception('Missing a parameter from order.')
+        elif any(order.count(letter) > 1 for letter in param_labels):
             raise Exception('Each parameter in order must occur exactly once.')
         else:
-            # might have an unnecessary wavelength
-            order = tuple(letter for letter in order if letter in parameters)
-
+            order = tuple(letter for letter in order if letter in param_labels)
 
         phases = [self.sim_phase_offset + n * TWO_PI / self.sim_num_phases
                     for n in xrange(self.sim_num_phases)]
         angles = [self.sim_angle_offset + n * TWO_PI / self.sim_num_angles
                     for n in xrange(self.sim_num_angles)]
-        ## INCOMPLETE ##
+
+        ## Calculate line pitches for each wavelength once.
+        # d  = m * wavelength / sin theta
+        pitches = {w: w / sin(self.sim_diffraction_angle) * TWO_PI / 360.
+                     for w in wavelengths}
+
+        # retardation for equal powers in 0 and combined +/-1 orders
+        r_waves = 123.9 / 360
+
+        # Generate pattern parameters
+        order_map = dict(p=phases, a=angles, w=wavelengths)
+        order_iterator = product(*[order_map[order[i]] 
+                                    for i in xrange(len(param_labels))])
+        
+        parameter_list = []
+        w_index = order.index('w')
+        p_index = order.index('p')
+        a_index = order.index('a')
+        for params in order_iterator:
+            w = params[w_index]
+            p = params[p_index]
+            a = params[a_index]
+            parameter_list.append((pitches[w], a, p, r_waves, w))
+
+        self.parameter_list = parameter_list
+        self.generate_stripe_sequence(parameter_list)
 
 
     def generate_stripe_sequence(self, patternparms):
@@ -134,11 +163,10 @@ class SpatialLightModulator(object):
             # Create a stripe 16-bit pattern
             pattern16 = numpy.ushort(
                 rint(
-                    c + c * cos(
-                        ph + TWO_PI *(
-                            cos(th) * self.kk + sin(th) * self.ll
-                        ) / p
-                    )))
+                    c + (modulation / 2) * cos(
+                        ph + TWO_PI * (cos(th) * self.kk + sin(th) * self.ll)
+                        / p)
+                    ))
             # Lose two LSBs and pass through the LUT for given wavelength.
             pattern = self.get_lut(wavelength)[pattern16 / 4]
             # Append to the sequence.
