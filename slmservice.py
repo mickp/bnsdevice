@@ -22,13 +22,17 @@ import socket, threading
 import os, re, numpy
 import Pyro4
 from PIL import Image
-from numpy import arange, cos, sin, pi, rint, meshgrid, zeros
+from numpy import arange, cos, sin, pi, rint, meshgrid, zeros, amax, amin
 from time import sleep
 
 CONFIG_NAME = 'slm'
 LOG_FORMAT = '%(asctime)s %(name)-12s %(levelname)-8s %(message)s'
 LOG_DATE_FORMAT = '%m-%d %H:%M'
 TWO_PI = 2. * pi
+
+#Pyro4.config.SERIALIZERS_ACCEPTED.remove('serpent')
+Pyro4.config.SERIALIZERS_ACCEPTED.add('pickle')
+#Pyro4.config.SERIALIZER='pickle'
 
 logging.basicConfig(level=logging.INFO,
                     format=LOG_FORMAT,
@@ -70,12 +74,71 @@ class SpatialLightModulator(object):
         self.load_calibration_data()
         ## Connect to the hardware.
         self.hardware = BNSDevice()     
+        ## Initialize the hardware.
         self.hardware.initialize()
 
+
+    def get_sequence(self):
+        return self.sequence
+
+
+    def set_sim_sequence(self, angle_phase_wavelength):
+        """ Generate a SIM sequence from a list of parameters.
+
+        angle_phase_wavelength is a list where each element is a tuple of the 
+        form (angle_number, phase_number, wavelength).
+        """
+        num_phases = 0
+        num_angles = 0
+        wavelengths = []
+        for (angle, phase, wavelength) in angle_phase_wavelength:
+            num_phases = max(num_phases, phase + 1)
+            num_angles = max(num_angles, angle + 1)
+            if wavelength not in wavelengths:
+                wavelengths.append(wavelength)
+
+        phases = [self.sim_phase_offset + n * TWO_PI / num_phases
+                    for n in xrange(num_phases)]
+        angles = [self.sim_angle_offset + n * TWO_PI / num_angles
+                    for n in xrange(num_angles)]
+
+        ## Calculate line pitches for each wavelength, once.
+        # d  = m * wavelength / sin theta
+        # 1/1000 since wavelength in nm, pixel pitch in microns.
+        pitches = {w: w / (1000. * sin(self.sim_diffraction_angle * TWO_PI / 360.))
+                     for w in wavelengths}
+        ## Figure out the LUTs we need for each wavelength, once.
+        luts = {w: self.get_lut(w) for w in wavelengths}
+
+        # retardation for equal powers in 0 and combined +/-1 orders
+        modulation = 65535 * 123.9 / 360
+
+        sequence = []
+        for (angle, phase, wavelength) in angle_phase_wavelength:
+            pp = pitches[wavelength] / self.pixel_pitch
+            th = angles[angle]
+            ph = phases[phase]
+            # Create a stripe 16-bit pattern
+            pattern16 = numpy.ushort(
+                rint(
+                    (0.5 * modulation) + (0.5 * modulation) * cos(
+                        ph + TWO_PI * (cos(th) * self.kk + sin(th) * self.ll)
+                        / pp)
+                    ))              
+            # Lose two LSBs and pass through the LUT for given wavelength.
+            pattern = luts[wavelength][pattern16 / 4]
+            # Append to the sequence.
+            sequence.append(pattern)
+
+        self.sequence = sequence
+        self.load_sequence()
+        
 
     def generate_sim_sequence(self, order=('p','a'), wavelengths=550):
         """ Generate and store a sequence of SIM grating images.
 
+        A standalone function to generate a SIM sequence from a given phase,
+        angle and (optionally) wavelength order.
         'order' is a tuple that specifies the order in which parameters are
         incremented. It should be a tuple of strings.
         'wavelengths' is either a single wavelength or list of wavelengths.
@@ -131,7 +194,7 @@ class SpatialLightModulator(object):
             a = params[a_index]
             parameter_list.append((pitches[w], a, p, r_waves, w))
 
-        self.parameter_list = parameter_list
+        self.parameter_list = parameter_list        
         self.generate_stripe_sequence(parameter_list)
 
 
@@ -146,33 +209,49 @@ class SpatialLightModulator(object):
             wavelength  intended wavelength, for LUT and calib.
         """
         sequence = []
-        for realpitch, angle, phase, waves, wavelength in patternparms:
-            
-            # modulation depth as 16-bit integer
-            if waves > 1.:
-                raise Exception ('Retardation > 1 not supported.')
-            modulation = int(waves * 65535)
-            # short name for phase
-            ph = phase
-            # short name for angle
-            th = angle
-            # short name for pitch in pixel units
-            p = realpitch / self.pixel_pitch
-            # centre of 16-bit range
-            c = 32767.5
-            # Create a stripe 16-bit pattern
-            pattern16 = numpy.ushort(
-                rint(
-                    c + (modulation / 2) * cos(
-                        ph + TWO_PI * (cos(th) * self.kk + sin(th) * self.ll)
-                        / p)
-                    ))
-            # Lose two LSBs and pass through the LUT for given wavelength.
-            pattern = self.get_lut(wavelength)[pattern16 / 4]
-            # Append to the sequence.
-            sequence.append(pattern)
+        for (realpitch, angle, phase, waves, wavelength) in patternparms:
+            try:# modulation depth as 16-bit integer
+                if waves > 1.:
+                    raise Exception ('Retardation > 1 not supported.')
+                #modulation = int(waves * 65535)
+                modulation = 65535
+                # short name for phase
+                ph = phase
+                # short name for angle
+                th = angle
+                # short name for pitch in pixel units
+                p = realpitch / self.pixel_pitch
+                # centre of 16-bit range
+                c = 32767.5
+                # Create a stripe 16-bit pattern
+                pattern16 = numpy.ushort(
+                    rint(
+                        c + (modulation / 2) * cos(
+                            ph + TWO_PI * (cos(th) * self.kk + sin(th) * self.ll)
+                            / p)
+                        ))
+                # Lose two LSBs and pass through the LUT for given wavelength.
+                pattern = self.get_lut(wavelength)[pattern16 / 4]
+                # Append to the sequence.
+                sequence.append(pattern)
+                self.logger.info('rp=%.3f, pp=%.3f, ang=%.3f, ph=%.3f, mod=%d, w=%s' % (realpitch, p, th, ph, modulation, wavelength))
+                self.logger.info('preLUT range: %d->%d; postLUT range: %d->%d' % 
+                                   (amin(pattern16), amax(pattern16), amin(pattern), amax(pattern)))
+            except Exception as e:
+                self.logger.error(e)
+
         self.sequence = sequence
         return len(self.sequence)
+
+
+    def dump_sequence(self):
+        from matplotlib import pyplot as plt
+        for n, im in enumerate(self.sequence):
+            fn = ''.join(['-', str(n), '.jpeg'])
+            implot = plt.imshow(im)
+            implot.set_cmap('gray')
+            plt.savefig(fn)
+        return (amin(self.sequence), amax(self.sequence))
 
 
     def get_lut(self, wavelength):
@@ -293,6 +372,10 @@ class SpatialLightModulator(object):
     def get_current_image_index(self):
         return self.hardware.curr_seq_image
 
+
+    def single_frame(self, index):
+        self.hardware.stop_sequence()
+        self.hardware.write_image(self.sequence[index])
 
 
 class Server(object):
