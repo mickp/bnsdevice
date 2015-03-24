@@ -1,4 +1,5 @@
 import numpy as np
+import os
 from numpy import rint, cos, sin, pi, meshgrid, arange
 
 from operator import itemgetter
@@ -9,7 +10,7 @@ LUT_FILES = {405: 'slm7070_at405_P16.lut',
              635: 'slm7070_at635_P16.lut'}
 LUTS = {}
 for wl, f in LUT_FILES.iteritems():
-    fh = open(f, 'r')
+    fh = open(os.path.join('LUT_files',f), 'r')
     thisLUT = np.array([int(line.split()[1]) for line in fh])
     LUTS.update({wl: thisLUT})
 
