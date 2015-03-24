@@ -152,6 +152,10 @@ class BNSDevice(object):
             self.haveSLM = True
             self.size = self.lib.GetImageSize(0)
             self.imagetype = bnsdatatype * (self.size * self.size)
+        # SLM shows nothing without calibration, so set flat WFC.
+        white = self.imagetype(65535)
+        self.write_cal(1, white)
+
 
 
     @requires_slm
