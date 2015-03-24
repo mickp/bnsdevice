@@ -48,8 +48,8 @@ def generate_stripe_series(patternparms):
                 rint((mp2 / pi) * 32767.5 + 32767.5 * cos(phase +
                 2 * pi * (cos(angle) * kk + sin(angle) * ll) / pitch)))
         # Scale to green LUT range
-        sequence *= 16256. / 65535.
-        sequence += 49279.
+        pattern *= 16256. / 65535.
+        pattern += 49279.
         sequence.append(pattern)
     return sequence
 
