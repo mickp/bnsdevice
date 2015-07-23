@@ -263,6 +263,14 @@ class SpatialLightModulator(object):
         return self.hardware.curr_seq_image
 
 
+    def get_sim_diffraction_angle(self):
+        return self.sim_diffraction_angle
+
+
+    def set_sim_diffraction_angle(self, angle):
+        self.sim_diffraction_angle = angle
+
+
     def single_frame(self, index):
         self.hardware.stop_sequence()
         self.hardware.write_image(self.sequence[index])
