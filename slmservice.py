@@ -268,7 +268,7 @@ class SpatialLightModulator(object):
 
 
     def set_sim_diffraction_angle(self, angle):
-        self.sim_diffraction_angle = angle
+        self.sim_diffraction_angle = float(angle)
 
 
     def single_frame(self, index):
