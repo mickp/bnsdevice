@@ -57,6 +57,7 @@ class SpatialLightModulator(object):
         self.kk, self.ll = meshgrid(x_range, y_range)
         ## Image sequence
         self.sequence = []
+        self.sequence_parameters = []
         ## SIM parameters
         self.sim_phase_offset = 0
         self.sim_angle_offset = TWO_PI / 5.
@@ -80,6 +81,10 @@ class SpatialLightModulator(object):
 
     def get_sequence(self):
         return self.sequence
+
+
+    def get_sequence_parameters(self):
+        return self.sequence_parameters
 
 
     def set_sim_sequence(self, angle_phase_wavelength):
@@ -129,7 +134,7 @@ class SpatialLightModulator(object):
             pattern = luts[wavelength][pattern16 / 4]
             # Append to the sequence.
             sequence.append(pattern)
-
+        self.sequence_parameters = angle_phase_wavelength
         self.sequence = sequence
         self.load_sequence()
 
