@@ -64,7 +64,7 @@ class SpatialLightModulator(object):
         self.sim_angle_offset = TWO_PI / 5.
         self.sim_num_phases = 5
         self.sim_num_angles = 3
-        self.sim_diffraction_angle = 0.5 # degrees
+        self.sim_diffraction_angle = 0.35 # degrees was 0.5 then .25  
         ## Look-up tables and calibration data
         # Paths
         self._LUTFolder = "LUT_files"
