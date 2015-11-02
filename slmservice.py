@@ -242,6 +242,30 @@ class SpatialLightModulator(object):
         return None
 
 
+    def set_test_sequence(self):
+        """ Generate a series of test images. """
+        from PIL import Image, ImageDraw, ImageFont
+        sequence = []
+        labels = range(15)
+        lut = self.get_lut(550)
+        imsize = self.pixels
+        font = ImageFont.truetype('arial.ttf', imsize[0]/2)
+        for c in labels:
+            image = Image.new('L', imsize)
+            draw = ImageDraw.Draw(image)
+            draw.setink(255)
+            draw.text((128,0), str(c), font=font)
+            pattern16 = numpy.array(image.getdata(), 
+                                    dtype=numpy.ushort).reshape(imsize)
+            pattern16 *= (65535 * 123.9 / 360) / pattern16.max()
+            pattern = lut[pattern16 / 4]
+            # Append to the sequence.
+            sequence.append(pattern)
+        self.sequence_parameters = map(lambda x: (x, 0, 0), labels)
+        self.sequence = sequence
+        self.load_sequence()
+
+
     def run(self):
         """ Power on and make device respond to triggers. """
         self.hardware.power = True
