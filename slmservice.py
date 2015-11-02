@@ -289,7 +289,10 @@ class SpatialLightModulator(object):
 
 
     def get_current_image_index(self):
-        return self.hardware.curr_seq_image
+        index = self.hardware.curr_seq_image
+        # Index is actually that of the image that will be displayed
+        # on the next trigger.
+        return index - 1 if index > 0 else len(self.sequence) - 1
 
 
     def get_sim_diffraction_angle(self):
