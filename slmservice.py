@@ -33,6 +33,7 @@ TWO_PI = 2. * pi
 #Pyro4.config.SERIALIZERS_ACCEPTED.remove('serpent')
 Pyro4.config.SERIALIZERS_ACCEPTED.add('pickle')
 #Pyro4.config.SERIALIZER='pickle'
+Pyro4.config.REQUIRE_EXPOSE = False
 
 logging.basicConfig(level=logging.INFO,
                     format=LOG_FORMAT,
@@ -117,7 +118,7 @@ class SpatialLightModulator(object):
         luts = {w: self.get_lut(w) for w in set(wavelengths)}
 
         # retardation for equal powers in 0 and combined +/-1 orders
-        modulation = 65535 * 123.9 / 360
+        modulation = 65535 * 250.5 / 360
 
         sequence = []
         for (angle, phase, wavelength) in angle_phase_wavelength:
