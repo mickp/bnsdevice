@@ -267,6 +267,10 @@ class SpatialLightModulator(object):
         self.sequence = sequence
         self.load_sequence()
 
+    def get_shape(self):
+        """ Return the device shape in pixels. """
+        return self.pixels
+
 
     def run(self):
         """ Power on and make device respond to triggers. """
