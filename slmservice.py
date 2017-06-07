@@ -41,6 +41,7 @@ logging.basicConfig(level=logging.INFO,
                     filemode='w')
 
 
+@Pyro4.expose
 class SpatialLightModulator(object):
     def __init__(self):
         # Logging
