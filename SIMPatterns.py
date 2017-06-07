@@ -54,7 +54,7 @@ class SIMPattern3D():
         pp = wavelength / (self.pixel_pitch * sin(deg2rad(theta)))
 
         ## Scaling factor to balance m=0,+/-1 orders
-        mp2 = 1.5
+        mp2 = 3.14159
 
         ## Iterator over self.patterns
         i = 0
@@ -72,3 +72,5 @@ class SIMPattern3D():
                 for angle in angles:
                     self.patterns[i] = patternfunc(k, l, deg2rad(angle), mp2)
                     i += 1
+        print self.patterns[i].min
+        print self.patterns[i].max
