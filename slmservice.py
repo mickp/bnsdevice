@@ -196,6 +196,7 @@ class SpatialLightModulator(object):
 
             wavelength = int(match.groupdict()['wavelength'])
             self.calibs[wavelength] = calib_data
+            # TODO: use the flatness calibration somewhere.
             self.logger.info("\tloaded data from %s." % f)
 
         ## Find lookup table files.        
