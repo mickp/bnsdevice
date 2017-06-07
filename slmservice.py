@@ -272,6 +272,36 @@ class SpatialLightModulator(object):
         return self.pixels
 
 
+    def set_custom_sequence(self, wavelengths, patterns):
+        """ Generate sequence from given wavelengths and patterns.
+
+        Accepts:
+          single wavelength, N patterns;
+          N wavelengths, N patterns
+
+        Patterns should be arrays of 16-bit unsigned integers; they will be
+        reshaped to the device size, which can be queried with get_shape().
+        """
+        if type(wavelengths) in [list, tuple]:
+            assert len(wavelengths) == len(patterns), \
+                "len(wavelengths) != len(patterns)."
+        else:
+            wavelengths = len(patterns) * [wavelengths]
+        # Determine LUT once for each wavelength.
+        luts = {w: self.get_lut(w) for w in set(wavelengths)}
+        # Generate the sequence.
+        sequence = []
+        for (w, p) in zip(wavelengths, patterns):
+            # Cast and reshape provided pattern.
+            pattern16 = numpy.array(p, dtype=numpy.ushort).reshape(self.pixels)
+            # Lose two LSBs and pass through the LUT for given wavelength.
+            pattern = luts[w][pattern16 / 4]
+            # Append to the sequence.
+            sequence.append(pattern)
+        # Load sequence to the hardware.
+        self.load_sequence()
+
+
     def run(self):
         """ Power on and make device respond to triggers. """
         self.hardware.power = True
