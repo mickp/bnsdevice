@@ -114,7 +114,7 @@ class SpatialLightModulator(object):
         pitches = {w: w / (1000. * sin(self.sim_diffraction_angle * TWO_PI / 360.))
                      for w in wavelengths}
         ## Figure out the LUTs we need for each wavelength, once.
-        luts = {w: self.get_lut(w) for w in wavelengths}
+        luts = {w: self.get_lut(w) for w in set(wavelengths)}
 
         # retardation for equal powers in 0 and combined +/-1 orders
         modulation = 65535 * 123.9 / 360
