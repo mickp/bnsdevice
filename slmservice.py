@@ -290,14 +290,14 @@ class SpatialLightModulator(object):
         # Determine LUT once for each wavelength.
         luts = {w: self.get_lut(w) for w in set(wavelengths)}
         # Generate the sequence.
-        sequence = []
+        self.sequence = []
         for (w, p) in zip(wavelengths, patterns):
             # Cast and reshape provided pattern.
             pattern16 = numpy.array(p, dtype=numpy.ushort).reshape(self.pixels)
             # Lose two LSBs and pass through the LUT for given wavelength.
             pattern = luts[w][pattern16 / 4]
             # Append to the sequence.
-            sequence.append(pattern)
+            self.sequence.append(pattern)
         # Load sequence to the hardware.
         self.load_sequence()
 
