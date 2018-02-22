@@ -54,7 +54,7 @@ class SIMPattern3D():
         pp = wavelength / (self.pixel_pitch * sin(deg2rad(theta)))
 
         ## Scaling factor to balance m=0,+/-1 orders
-        mp2 = 3.14159
+        mp2 = 1000*3.14159
 
         ## Iterator over self.patterns
         i = 0
