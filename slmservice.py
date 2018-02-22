@@ -85,7 +85,7 @@ class SpatialLightModulator(object):
         return self.sequence
 
 
-    def get_sequence_parameters(self):
+    def get_sim_sequence(self):
         return self.sequence_parameters
 
 
