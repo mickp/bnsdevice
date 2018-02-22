@@ -329,7 +329,7 @@ class SpatialLightModulator(object):
         return self.hardware.power
 
 
-    def get_current_image_index(self):
+    def get_sequence_index(self):
         index = self.hardware.curr_seq_image
         # Index is actually that of the image that will be displayed
         # on the next trigger.
