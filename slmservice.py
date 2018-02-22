@@ -321,6 +321,10 @@ class SpatialLightModulator(object):
         return self.hardware.temperature
 
 
+    def get_is_enabled(self):
+        return self.hardware.power
+
+
     def get_power(self):
         return self.hardware.power
 
