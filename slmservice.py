@@ -118,7 +118,7 @@ class SpatialLightModulator(object):
         luts = {w: self.get_lut(w) for w in set(wavelengths)}
 
         # retardation for equal powers in 0 and combined +/-1 orders
-        modulation = 65535 * 150. / 360.0
+        modulation = 65535 * 160.9 / 360.0
 
         sequence = []
         for (angle, phase, wavelength) in angle_phase_wavelength:
