@@ -132,6 +132,9 @@ class BNSDevice(object):
         # Otherwise, the DLL can open an error window about having already
         # initialized another DLL, which we won't see on a remote machine.
         if self.lib:
+            # Ensure arg. to FreeLibary is wrapped as HMODULE, not Int32.
+            from ctypes import wintypes
+            ctypes.windll.kernel32.FreeLibrary.argtypes = [wintypes.HMODULE]
             while(windll.kernel32.FreeLibrary(self.lib._handle)):
                 # Keep calling FreeLibrary until library is really closed.
                 pass
