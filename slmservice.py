@@ -105,9 +105,9 @@ class SpatialLightModulator(object):
                 wavelengths.append(wavelength)
 
         phases = [self.sim_phase_offset + n * TWO_PI / num_phases
-                    for n in xrange(num_phases)]
+                    for n in range(num_phases)]
         angles = [self.sim_angle_offset + n * TWO_PI / num_angles
-                    for n in xrange(num_angles)]
+                    for n in range(num_angles)]
 
         ## Calculate line pitches for each wavelength, once.
         # d  = m * wavelength / sin theta
@@ -133,7 +133,7 @@ class SpatialLightModulator(object):
                         / pp)
                     ))              
             # Lose two LSBs and pass through the LUT for given wavelength.
-            pattern = luts[wavelength][pattern16 / 4]
+            pattern = luts[wavelength][pattern16 // 4]
             # Append to the sequence.
             sequence.append(pattern)
         self.sequence_parameters = angle_phase_wavelength
