@@ -106,7 +106,7 @@ class SpatialLightModulator(object):
 
         phases = [self.sim_phase_offset + n * TWO_PI / num_phases
                     for n in range(num_phases)]
-        angles = [self.sim_angle_offset + n * TWO_PI / num_angles
+        angles = [self.sim_angle_offset + n * pi / num_angles
                     for n in range(num_angles)]
 
         ## Calculate line pitches for each wavelength, once.
@@ -118,7 +118,7 @@ class SpatialLightModulator(object):
         luts = {w: self.get_lut(w) for w in set(wavelengths)}
 
         # retardation for equal powers in 0 and combined +/-1 orders
-        modulation = 65535 * 150. / 360.0
+        modulation = 65535 * 150. / 360.0  # Should 2nd value be 150 or 250?
 
         sequence = []
         for (angle, phase, wavelength) in angle_phase_wavelength:
