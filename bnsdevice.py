@@ -50,19 +50,14 @@ class BNSDevice(object):
       int ComputeTF (float FrameRate)
     + void SetTrueFrames (int Board, int TrueFrames)
     
-    ==== Undocumented ====
-    + GetInternalTemp
-      GetTIFFInfo
-    + GetCurSeqImage
-      GetImageSize
-    
-    ==== Notes ====
-    The BNS documentation states that int Board is a 1-based index, but it
-    would appear to be 0-based:  if I address board 1 with Board=1, I get an msc
-    error; using Board=0 seems to work just fine.
-    """
+    ==== Newly documented ====
+    + double GetInternalTemp (int Board, TEMPUNITS units);
+    + void GetTIFFInfo (const char* FilePath, unsigned int* Width,
+                        unsigned int* Height, unsigned short* BPP);
+    + int GetCurSeqImage (int Board);
+    + int GetImageSize (int Board);  """
 
-    def __init__(self):
+    def __init__(self, board=1):
         # Must chdir to module path or DLL can not find its dependencies.
         try:
             modpath = os.path.dirname(__file__)
@@ -71,15 +66,21 @@ class BNSDevice(object):
             # Probably running from interactive shell
             modpath = ''
         # path to dll
-        self.libPath = os.path.join(modpath, "PCIe16Interface")
+        self.libPath = os.path.join(modpath, "Interface")
+                                             #"PCIe16Interface")
+        print(self.libPath)
         # loaded library instance
         # Now loaded here so that read_tiff is accessible even if there is no 
         # SLM present.
         self.lib = ctypes.WinDLL(self.libPath)
+        print("*******************\n", self.lib, self.lib.Constructor)
         # Boolean showing initialization status.
         self.haveSLM = False
         # Data type to store images.
         self.imagetype = None
+        # Board identifier. 1-based in 2019-07 DLL builds (previously 0-based).
+        self._board = c_int(board)
+
 
     ## === DECORATORS === #
     # decorator definition for methods that require an SLM      
@@ -95,23 +96,23 @@ class BNSDevice(object):
     @property
     @requires_slm
     def curr_seq_image(self): # tested - works
-        return self.lib.GetCurSeqImage(c_int(0))
+        return self.lib.GetCurSeqImage(self._board)
 
 
     @property
     @requires_slm
     def power(self): #tested - works
-        return self.lib.GetSLMPower(c_int(0))
+        return self.lib.GetSLMPower(self._board)
     @power.setter
     @requires_slm
     def power(self, value): #tested - works
-        self.lib.SLMPower(c_int(0), c_bool(value))
+        self.lib.SLMPower(self._board, c_bool(value))
 
 
     @property
     @requires_slm
     def temperature(self): #tested - works
-        return self.lib.GetInternalTemp(c_int(0))
+        return self.lib.GetInternalTemp(self._board, c_int(0))
 
 
     ## === METHODS === #
@@ -153,7 +154,7 @@ class BNSDevice(object):
                             "can only handle one device.")
         else:
             self.haveSLM = True
-            self.size = self.lib.GetImageSize(0)
+            self.size = self.lib.GetImageSize(self._board)
             self.imagetype = bnsdatatype * (self.size * self.size)
         # SLM shows nothing without calibration, so set flat WFC.
         white = self.imagetype(65535)
@@ -166,7 +167,7 @@ class BNSDevice(object):
         ## Warning: opens a dialog if it can't read the LUT file.
         # Should probably check if the LUT file exists and validate it
         # before calling LoadLUTFile.
-        self.lib.LoadLUTFile(c_int(0), c_char_p(filename))
+        self.lib.LoadLUTFile(self._board, c_char_p(filename))
 
 
     @requires_slm
@@ -193,7 +194,7 @@ class BNSDevice(object):
         # Make a contiguous array.
         sequence = (self.imagetype * len(imageList))(*imageList)
         # LoadSequence (int Board, unsigned short* Image, int NumberOfImages)
-        self.lib.LoadSequence(c_int(0), ctypes.byref(sequence), 
+        self.lib.LoadSequence(self._board, ctypes.byref(sequence),
                               c_int(len(imageList)))
 
 
@@ -215,7 +216,7 @@ class BNSDevice(object):
 
     @requires_slm
     def set_true_frames(self, trueFrames): #tested - no errors
-        self.lib.SetTrueFrames(c_int(0), c_int(trueFrames))
+        self.lib.SetTrueFrames(self._board, c_int(trueFrames))
 
 
     @requires_slm
@@ -245,14 +246,14 @@ class BNSDevice(object):
         # Header file states it's an unsigned short.
         
         image = self.imagetype(*calImage)
-        self.lib.WriteCal(c_int(0), c_int(type), ctypes.byref(image))
+        self.lib.WriteCal(self._board, c_int(type), ctypes.byref(image))
 
 
     @requires_slm
     def write_image(self, image): #tested - works
     ## void WriteImage (int Board, unsigned short* Image)
         if type(image) is self.imagetype:
-            self.lib.WriteImage(c_int(0), 
+            self.lib.WriteImage(self._board,
                                 ctypes.byref(self.imagetype(*image)))
         elif type(image) is np.ndarray:
             self.lib.WriteImage(0, self.imagetype(*image.flatten()))
