@@ -95,23 +95,36 @@ class BNSDevice(object):
     ## === PROPERTIES === #
     @property
     @requires_slm
-    def curr_seq_image(self): # tested - works
-        return self.lib.GetCurSeqImage(self._board)
+    def curr_seq_image(self):
+        #return self.lib.GetCurSeqImage(self._board)
+        # GetCurrSeqImage no longer exists.
+        # GetRunStatus is supposed to do the same thing, but it appears
+        # to always return zero, or our trigger isn't working.
+        return self.lib.GetRunStatus(self._board)
+
+
+    @requires_slm
+    def get_power(self):
+        # Subtracting 1 for now. Other functions in interface.dll now seem
+        # to index devices from 1 (as per old docs) rather than 0(which is what
+        # the old DLL did, contrary to the docs). With one device attached,
+        # calling GetSLMPower(1) throws a C++ exception, but calling with 0
+        # appears to return the power state as set by SLMPower, so I can only
+        # assume that this one function does not use the new numbering scheme.
+        return self.lib.GetSLMPower(self._board.value - 1)
+
+    @requires_slm
+    def set_power(self, value):
+        # SLMPower used to take arguments (board index, power state).
+        # It now appears that the first argument is the power state, not
+        # the board index. We need documentation for this change.
+        #self.lib.SLMPower(self._board, c_bool(value))
+        self.lib.SLMPower(c_bool(value))
 
 
     @property
     @requires_slm
-    def power(self): #tested - works
-        return self.lib.GetSLMPower(self._board)
-    @power.setter
-    @requires_slm
-    def power(self, value): #tested - works
-        self.lib.SLMPower(self._board, c_bool(value))
-
-
-    @property
-    @requires_slm
-    def temperature(self): #tested - works
+    def temperature(self):
         return self.lib.GetInternalTemp(self._board, c_int(0))
 
 
@@ -157,7 +170,7 @@ class BNSDevice(object):
             self.size = self.lib.GetImageSize(self._board)
             self.imagetype = bnsdatatype * (self.size * self.size)
         # SLM shows nothing without calibration, so set flat WFC.
-        white = self.imagetype(65535)
+        white = self.imagetype(*[65535] * self.size * self.size)
         self.write_cal(1, white)
 
 
@@ -220,17 +233,17 @@ class BNSDevice(object):
 
 
     @requires_slm
-    def start_sequence(self): # tested - works
+    def start_sequence(self):
         self.lib.StartSequence()
 
 
     @requires_slm
-    def stop_sequence(self): # tested - works
+    def stop_sequence(self): 
         self.lib.StopSequence()
 
 
     @requires_slm
-    def write_cal(self, type, calImage): #tested - no errors
+    def write_cal(self, caltype, calImage): #tested - no errors
         ## void WriteCal(int Board, CAL_TYPE Caltype={WFC;NUC},
         #               unsigned char* Image)
         
@@ -239,6 +252,9 @@ class BNSDevice(object):
         # 1 = WFC = wavefront correction
         # 0 = NUC = non-uniformity correction.
 
+        # 2019-09 - It seems that WriteCal no longer takes a 'type' argument.
+        # We need documentation for this change.
+
         ## Image is a 1D array containing values from the 2D image.
         # image = (c_char * len(calImage))(*calImage)
         # Doesn't seem to like c_char, which doesn't make sense anyway, as
@@ -246,11 +262,13 @@ class BNSDevice(object):
         # Header file states it's an unsigned short.
         
         image = self.imagetype(*calImage)
-        self.lib.WriteCal(self._board, c_int(type), ctypes.byref(image))
+        # Removing caltype argument for now.
+        # TODO: ask for documentation for change and fix accordingly.
+        self.lib.WriteCal(self._board, ctypes.byref(image))
 
 
     @requires_slm
-    def write_image(self, image): #tested - works
+    def write_image(self, image):
     ## void WriteImage (int Board, unsigned short* Image)
         if type(image) is self.imagetype:
             self.lib.WriteImage(self._board,

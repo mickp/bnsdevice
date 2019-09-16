@@ -304,7 +304,7 @@ class SpatialLightModulator(object):
 
     def run(self):
         """ Power on and make device respond to triggers. """
-        self.hardware.power = True
+        self.hardware.set_power(True)
         self.hardware.start_sequence()
         return None
 
@@ -312,7 +312,7 @@ class SpatialLightModulator(object):
     def stop(self):
         """ Power off and stop device responding to triggers. """
         self.hardware.stop_sequence()
-        self.hardware.power = False
+        self.hardware.set_power(False)
         return None
 
 
@@ -321,11 +321,11 @@ class SpatialLightModulator(object):
 
 
     def get_is_enabled(self):
-        return self.hardware.power
+        return self.hardware.get_power()
 
 
     def get_power(self):
-        return self.hardware.power
+        return self.hardware.get_power()
 
 
     def get_sequence_index(self):
