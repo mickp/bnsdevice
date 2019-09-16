@@ -104,9 +104,9 @@ class SpatialLightModulator(object):
                 wavelengths.append(wavelength)
 
         phases = [self.sim_phase_offset + n * TWO_PI / num_phases
-                    for n in xrange(num_phases)]
+                    for n in range(num_phases)]
         angles = [self.sim_angle_offset + n * TWO_PI / num_angles
-                    for n in xrange(num_angles)]
+                    for n in range(num_angles)]
 
         ## Calculate line pitches for each wavelength, once.
         # d  = m * wavelength / sin theta
@@ -251,16 +251,15 @@ class SpatialLightModulator(object):
         labels = range(15)
         lut = self.get_lut(550)
         imsize = self.pixels
-        font = ImageFont.truetype('arial.ttf', imsize[0]/2)
+        font = ImageFont.truetype('arial.ttf', imsize[0]//2)
         for c in labels:
             image = Image.new('L', imsize)
             draw = ImageDraw.Draw(image)
-            draw.setink(255)
-            draw.text((128,0), str(c), font=font)
+            draw.text((128,0), str(c), font=font, outline=255)
             pattern16 = numpy.array(image.getdata(), 
                                     dtype=numpy.ushort).reshape(imsize)
-            pattern16 *= (65535 * 123.9 / 360) / pattern16.max()
-            pattern = lut[pattern16 / 4]
+            pattern16 *= int(65535 * 123.9 / 360) // pattern16.max()
+            pattern = lut[pattern16 // 4]
             # Append to the sequence.
             sequence.append(pattern)
         self.sequence_parameters = map(lambda x: (x, 0, 0), labels)
