@@ -80,11 +80,11 @@ class SpatialLightModulator(object):
         self.hardware.initialize()
 
 
-    def get_sequence(self):
+    def get_sequence_images(self):
         return self.sequence
 
 
-    def get_sequence_parameters(self):
+    def get_sim_sequence(self):
         return self.sequence_parameters
 
 
@@ -319,11 +319,13 @@ class SpatialLightModulator(object):
         return self.hardware.temperature
 
 
-    def get_power(self):
+    #def get_power(self):
+    def get_is_enabled(self):
         return self.hardware.power
 
 
-    def get_current_image_index(self):
+    #def get_current_image_index(self):
+    def get_sequence_index(self):
         index = self.hardware.curr_seq_image
         # Index is actually that of the image that will be displayed
         # on the next trigger.
