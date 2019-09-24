@@ -72,5 +72,7 @@ class SIMPattern3D():
                 for angle in angles:
                     self.patterns[i] = patternfunc(k, l, deg2rad(angle), mp2)
                     i += 1
-        print self.patterns[i].min
-        print self.patterns[i].max
+        print(i)
+       # print (self.patterns.shape())
+        print (self.patterns[i-1].min())
+        print (self.patterns[i-1].max())

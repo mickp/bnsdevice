@@ -25,6 +25,9 @@ from PIL import Image
 from numpy import arange, cos, sin, pi, rint, meshgrid, zeros, amax, amin
 from time import sleep
 
+import imageio
+
+
 CONFIG_NAME = 'slm'
 LOG_FORMAT = '%(asctime)s %(name)-12s %(levelname)-8s %(message)s'
 LOG_DATE_FORMAT = '%m-%d %H:%M'
@@ -121,6 +124,7 @@ class SpatialLightModulator(object):
         modulation = 65535 * 150. / 360.0  # Should 2nd value be 150 or 250?
 
         sequence = []
+        i=0
         for (angle, phase, wavelength) in angle_phase_wavelength:
             pp = pitches[wavelength] / self.pixel_pitch
             th = angles[angle]
@@ -136,6 +140,8 @@ class SpatialLightModulator(object):
             pattern = luts[wavelength][pattern16 // 4]
             # Append to the sequence.
             sequence.append(pattern)
+            imageio.imwrite('img'+str(i)+'.tiff',pattern)
+            i=i+1
         self.sequence_parameters = angle_phase_wavelength
         self.sequence = sequence
         self.load_sequence()
