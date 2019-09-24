@@ -132,7 +132,7 @@ class SpatialLightModulator(object):
                         / pp)
                     ))              
             # Lose two LSBs and pass through the LUT for given wavelength.
-            pattern = luts[wavelength][pattern16 / 4]
+            pattern = luts[wavelength][pattern16 // 4]
             # Append to the sequence.
             sequence.append(pattern)
         self.sequence_parameters = angle_phase_wavelength
