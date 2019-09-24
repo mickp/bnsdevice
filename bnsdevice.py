@@ -153,7 +153,7 @@ class BNSDevice(object):
                             "can only handle one device.")
         else:
             self.haveSLM = True
-            self.size = self.lib.GetImageSize(0)
+            self.size = 512 # self.lib.GetImageSize(0)
             self.imagetype = bnsdatatype * (self.size * self.size)
         # SLM shows nothing without calibration, so set flat WFC.
         white = self.imagetype(65535)
